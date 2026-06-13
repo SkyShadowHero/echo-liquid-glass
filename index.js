@@ -2,8 +2,6 @@
 // ── Liquid Glass Refraction Engine ──
 // EchoMusic 插件：为 .player-bar 提供纯折射液态玻璃效果
 // 基于 SVG feDisplacementMap + 动态 Canvas 位移贴图
-// 仅支持 Chromium / Electron 环境
-// 依赖 echo-miuix-plugin 提供 MIUIX 主题颜色变量 (--miuix-*)
 
 /**
  * 计算折射剖面（Snell 定律物理模型）
@@ -133,7 +131,7 @@ function generateSpecularMap(w, h, radius, bezelWidth, angle) {
       var edge = Math.sqrt(Math.max(0, 1 - Math.pow(1 - fromSide, 2)));
       var coeff = dot * edge;
       var col = (255 * coeff) | 0;
-      var alpha = Math.min(255, Math.max(0, (col * coeff * op * 0.6) | 0));
+      var alpha = Math.min(255, Math.max(0, (col * coeff * op * 0.85) | 0));
       var idx = (y1 * w + x1) * 4;
       d[idx] = col; d[idx + 1] = col; d[idx + 2] = col; d[idx + 3] = alpha;
     }
@@ -176,7 +174,7 @@ function LiquidGlassManager(opts) {
   this._thickness = opts.thickness != null ? opts.thickness : 60;
   this._bezelWidth = opts.bezelWidth != null ? opts.bezelWidth : 40;
   this._ior = opts.ior != null ? opts.ior : 2.5;
-  this._specularOpacity = opts.specularOpacity != null ? opts.specularOpacity : 0.1;
+  this._specularOpacity = opts.specularOpacity != null ? opts.specularOpacity : 0.2;
   this._bgOpacity = opts.bgOpacity != null ? opts.bgOpacity : 20;
   this._blurAmount = opts.blurAmount != null ? opts.blurAmount : 0;
   this._active = false;
@@ -341,7 +339,7 @@ export function activate(ctx) {
     thickness: 60,
     bezelWidth: 40,
     ior: 2.5,
-    specularOpacity: 0.1,
+    specularOpacity: 0.2,
     bgOpacity: 20,
     blurAmount: 0,
   };
@@ -468,7 +466,7 @@ export function activate(ctx) {
                 'onUpdate:modelValue': function (v) { draft.enabled = Boolean(v); saveNow(); },
               }),
             ]),
-            // 参数调节（开启时显示）
+            // 参数调节
             draft.enabled ? h('div', { class: 'settings-card', style: 'border-radius: 0; overflow: visible; width: 100%; padding: 4px 0;' }, [
               // 玻璃厚度
               h('div', { class: 'settings-item', style: 'display: flex; flex-direction: column; gap: 4px; padding-top: 8px; padding-bottom: 8px;' }, [
