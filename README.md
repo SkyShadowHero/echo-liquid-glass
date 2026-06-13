@@ -1,6 +1,6 @@
 # Echo Liquid Glass
 
-为 EchoMusic 底部音乐控件添加 iOS 风格液态玻璃折射效果。
+为 EchoMusic 底部音乐控件添加液态折射效果。
 
 基于 SVG feDisplacementMap + 动态 Canvas 位移贴图，仅折射（可叠加模糊）。
 
