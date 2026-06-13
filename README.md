@@ -6,7 +6,7 @@
 
 ## 依赖
 
-需要配合 [echo-miuix-plugin](https://github.com/SkyShadowHero/echo-miuix-plugin) 使用，提供 MIUIX 主题颜色变量。
+需要配合 [echo-miuix-plugin](https://github.com/SkyShadowHero/echo-miuix-plugin) 使用，提供沉浸式播放控件支持。
 
 ## 效果实现
 
