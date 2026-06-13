@@ -533,7 +533,7 @@ export function activate(ctx) {
               ]),
               h(Button, {
                 class: 'settings-button github-star',
-                onClick: function () { window.open('https://github.com/SkyShadowHero/echo-miuix-plugin', '_blank'); },
+                onClick: function () { window.open('https://github.com/SkyShadowHero/echo-liquid-glass', '_blank'); },
               }, 'Github'),
             ]),
           ]),
