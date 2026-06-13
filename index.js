@@ -177,7 +177,7 @@ function LiquidGlassManager(opts) {
   this._bezelWidth = opts.bezelWidth != null ? opts.bezelWidth : 40;
   this._ior = opts.ior != null ? opts.ior : 2.5;
   this._specularOpacity = opts.specularOpacity != null ? opts.specularOpacity : 0.1;
-  this._bgOpacity = opts.bgOpacity != null ? opts.bgOpacity : 80;
+  this._bgOpacity = opts.bgOpacity != null ? opts.bgOpacity : 20;
   this._blurAmount = opts.blurAmount != null ? opts.blurAmount : 0;
   this._active = false;
   this._rebuildTimer = null;
@@ -342,7 +342,7 @@ export function activate(ctx) {
     bezelWidth: 40,
     ior: 2.5,
     specularOpacity: 0.1,
-    bgOpacity: 80,
+    bgOpacity: 20,
     blurAmount: 0,
   };
 
