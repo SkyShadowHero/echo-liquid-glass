@@ -3,6 +3,7 @@
 // EchoMusic 插件：为 .player-bar 提供纯折射液态玻璃效果
 // 基于 SVG feDisplacementMap + 动态 Canvas 位移贴图
 // 仅支持 Chromium / Electron 环境
+// 依赖 echo-miuix-plugin 提供 MIUIX 主题颜色变量 (--miuix-*)
 
 /**
  * 计算折射剖面（Snell 定律物理模型）
@@ -176,6 +177,8 @@ function LiquidGlassManager(opts) {
   this._bezelWidth = opts.bezelWidth != null ? opts.bezelWidth : 40;
   this._ior = opts.ior != null ? opts.ior : 2.5;
   this._specularOpacity = opts.specularOpacity != null ? opts.specularOpacity : 0.1;
+  this._bgOpacity = opts.bgOpacity != null ? opts.bgOpacity : 80;
+  this._blurAmount = opts.blurAmount != null ? opts.blurAmount : 0;
   this._active = false;
   this._rebuildTimer = null;
   this._resizeObserver = null;
@@ -187,6 +190,7 @@ LiquidGlassManager.prototype.mount = function () {
   this._ensureSVG();
   this._rebuildFilter();
   this._applyBackdropFilter();
+  this._applyCSS();
   var self = this;
   this._resizeObserver = new ResizeObserver(function () {
     self._scheduleRebuild();
@@ -207,6 +211,7 @@ LiquidGlassManager.prototype.unmount = function () {
   if (this._el) {
     this._el.style.removeProperty('backdrop-filter');
     this._el.style.removeProperty('-webkit-backdrop-filter');
+    this._el.style.removeProperty('background');
     this._el.classList.remove('liquid-glass-refraction');
   }
   this._removeSVG();
@@ -214,11 +219,18 @@ LiquidGlassManager.prototype.unmount = function () {
 
 LiquidGlassManager.prototype.updateParams = function (opts) {
   opts = opts || {};
-  if ('thickness' in opts) this._thickness = opts.thickness;
-  if ('bezelWidth' in opts) this._bezelWidth = opts.bezelWidth;
-  if ('ior' in opts) this._ior = opts.ior;
-  if ('specularOpacity' in opts) this._specularOpacity = opts.specularOpacity;
-  if (this._active) this._scheduleRebuild();
+  var needRebuild = false;
+  var needCSS = false;
+  if ('thickness' in opts) { this._thickness = opts.thickness; needRebuild = true; }
+  if ('bezelWidth' in opts) { this._bezelWidth = opts.bezelWidth; needRebuild = true; }
+  if ('ior' in opts) { this._ior = opts.ior; needRebuild = true; }
+  if ('specularOpacity' in opts) { this._specularOpacity = opts.specularOpacity; needRebuild = true; }
+  if ('bgOpacity' in opts) { this._bgOpacity = opts.bgOpacity; needCSS = true; }
+  if ('blurAmount' in opts) { this._blurAmount = opts.blurAmount; needCSS = true; }
+  if (this._active) {
+    if (needRebuild) this._scheduleRebuild();
+    if (needCSS) this._applyCSS();
+  }
 };
 
 LiquidGlassManager.prototype.getParams = function () {
@@ -227,6 +239,8 @@ LiquidGlassManager.prototype.getParams = function () {
     bezelWidth: this._bezelWidth,
     ior: this._ior,
     specularOpacity: this._specularOpacity,
+    bgOpacity: this._bgOpacity,
+    blurAmount: this._blurAmount,
   };
 };
 
@@ -291,9 +305,21 @@ LiquidGlassManager.prototype._writeFilter = function (filterHTML) {
 
 LiquidGlassManager.prototype._applyBackdropFilter = function () {
   if (!this._el) return;
-  var filterUrl = 'url(#' + this._filterId + ')';
-  this._el.style.setProperty('backdrop-filter', filterUrl, 'important');
-  this._el.style.setProperty('-webkit-backdrop-filter', filterUrl, 'important');
+  var filters = 'url(#' + this._filterId + ')';
+  if (this._blurAmount > 0.5) {
+    filters += ' blur(' + this._blurAmount.toFixed(1) + 'px)';
+  }
+  this._el.style.setProperty('backdrop-filter', filters, 'important');
+  this._el.style.setProperty('-webkit-backdrop-filter', filters, 'important');
+};
+
+LiquidGlassManager.prototype._applyCSS = function () {
+  if (!this._el) return;
+  // 背景不透明度
+  var bg = 'color-mix(in srgb, var(--miuix-background) ' + this._bgOpacity + '%, transparent)';
+  this._el.style.setProperty('background', bg, 'important');
+  // 刷新 backdrop-filter（模糊度可能变化）
+  this._applyBackdropFilter();
 };
 
 LiquidGlassManager.prototype._scheduleRebuild = function () {
@@ -316,6 +342,8 @@ export function activate(ctx) {
     bezelWidth: 40,
     ior: 2.5,
     specularOpacity: 0.1,
+    bgOpacity: 80,
+    blurAmount: 0,
   };
 
   // 等待 player-bar 出现后初始化液态玻璃
@@ -328,21 +356,21 @@ export function activate(ctx) {
       bezelWidth: liquidGlassParams.bezelWidth,
       ior: liquidGlassParams.ior,
       specularOpacity: liquidGlassParams.specularOpacity,
+      bgOpacity: liquidGlassParams.bgOpacity,
+      blurAmount: liquidGlassParams.blurAmount,
     });
     ctx.storage.get('liquid-glass-settings').then(function (saved) {
       var enabled = saved && typeof saved.enabled === 'boolean' ? saved.enabled : true;
       if (enabled) liquidGlass.mount();
       if (saved) {
-        liquidGlass.updateParams({
-          thickness: saved.thickness != null ? saved.thickness : 60,
-          bezelWidth: saved.bezelWidth != null ? saved.bezelWidth : 40,
-          ior: saved.ior != null ? saved.ior : 2.5,
-          specularOpacity: saved.specularOpacity != null ? saved.specularOpacity : 0.1,
-        });
-        liquidGlassParams.thickness = saved.thickness != null ? saved.thickness : 60;
-        liquidGlassParams.bezelWidth = saved.bezelWidth != null ? saved.bezelWidth : 40;
-        liquidGlassParams.ior = saved.ior != null ? saved.ior : 2.5;
-        liquidGlassParams.specularOpacity = saved.specularOpacity != null ? saved.specularOpacity : 0.1;
+        var p = {};
+        if (typeof saved.thickness === 'number') { p.thickness = saved.thickness; liquidGlassParams.thickness = saved.thickness; }
+        if (typeof saved.bezelWidth === 'number') { p.bezelWidth = saved.bezelWidth; liquidGlassParams.bezelWidth = saved.bezelWidth; }
+        if (typeof saved.ior === 'number') { p.ior = saved.ior; liquidGlassParams.ior = saved.ior; }
+        if (typeof saved.specularOpacity === 'number') { p.specularOpacity = saved.specularOpacity; liquidGlassParams.specularOpacity = saved.specularOpacity; }
+        if (typeof saved.bgOpacity === 'number') { p.bgOpacity = saved.bgOpacity; liquidGlassParams.bgOpacity = saved.bgOpacity; }
+        if (typeof saved.blurAmount === 'number') { p.blurAmount = saved.blurAmount; liquidGlassParams.blurAmount = saved.blurAmount; }
+        liquidGlass.updateParams(p);
       }
     });
     ctx.dispose(function () {
@@ -377,6 +405,8 @@ export function activate(ctx) {
         bezelWidth: liquidGlassParams.bezelWidth,
         ior: liquidGlassParams.ior,
         specularOpacity: liquidGlassParams.specularOpacity,
+        bgOpacity: liquidGlassParams.bgOpacity,
+        blurAmount: liquidGlassParams.blurAmount,
       });
 
       ctx.storage.get('liquid-glass-settings').then(function (saved) {
@@ -386,6 +416,8 @@ export function activate(ctx) {
           if (typeof saved.bezelWidth === 'number') draft.bezelWidth = saved.bezelWidth;
           if (typeof saved.ior === 'number') draft.ior = saved.ior;
           if (typeof saved.specularOpacity === 'number') draft.specularOpacity = saved.specularOpacity;
+          if (typeof saved.bgOpacity === 'number') draft.bgOpacity = saved.bgOpacity;
+          if (typeof saved.blurAmount === 'number') draft.blurAmount = saved.blurAmount;
         }
       });
 
@@ -396,6 +428,8 @@ export function activate(ctx) {
           bezelWidth: draft.bezelWidth,
           ior: draft.ior,
           specularOpacity: draft.specularOpacity,
+          bgOpacity: draft.bgOpacity,
+          blurAmount: draft.blurAmount,
         });
         if (liquidGlass) {
           if (draft.enabled) {
@@ -404,6 +438,8 @@ export function activate(ctx) {
               bezelWidth: draft.bezelWidth,
               ior: draft.ior,
               specularOpacity: draft.specularOpacity,
+              bgOpacity: draft.bgOpacity,
+              blurAmount: draft.blurAmount,
             });
             liquidGlass.mount();
           } else {
@@ -413,6 +449,8 @@ export function activate(ctx) {
           liquidGlassParams.bezelWidth = draft.bezelWidth;
           liquidGlassParams.ior = draft.ior;
           liquidGlassParams.specularOpacity = draft.specularOpacity;
+          liquidGlassParams.bgOpacity = draft.bgOpacity;
+          liquidGlassParams.blurAmount = draft.blurAmount;
         }
       }
 
@@ -436,28 +474,25 @@ export function activate(ctx) {
               h('div', { class: 'settings-item', style: 'display: flex; flex-direction: column; gap: 4px; padding-top: 8px; padding-bottom: 8px;' }, [
                 h('div', { style: 'font-weight: 500; font-size: 13px; color: var(--miuix-on-background);' }, '玻璃厚度'),
                 h(Slider, {
-                  modelValue: draft.thickness,
-                  min: 10, max: 200, step: 5,
+                  modelValue: draft.thickness, min: 10, max: 200, step: 5,
                   showValue: true, valueSuffix: 'px',
                   'onUpdate:modelValue': function (v) { draft.thickness = Number(v); saveNow(); },
                 }),
               ]),
-              // 折射区域宽度
+              // 折射区域
               h('div', { class: 'settings-item', style: 'display: flex; flex-direction: column; gap: 4px; padding-top: 8px; padding-bottom: 8px;' }, [
                 h('div', { style: 'font-weight: 500; font-size: 13px; color: var(--miuix-on-background);' }, '折射区域'),
                 h(Slider, {
-                  modelValue: draft.bezelWidth,
-                  min: 2, max: 60, step: 2,
+                  modelValue: draft.bezelWidth, min: 2, max: 60, step: 2,
                   showValue: true, valueSuffix: 'px',
                   'onUpdate:modelValue': function (v) { draft.bezelWidth = Number(v); saveNow(); },
                 }),
               ]),
-              // 折射率 (IOR)
+              // 折射率
               h('div', { class: 'settings-item', style: 'display: flex; flex-direction: column; gap: 4px; padding-top: 8px; padding-bottom: 8px;' }, [
                 h('div', { style: 'font-weight: 500; font-size: 13px; color: var(--miuix-on-background);' }, '折射率 (IOR)'),
                 h(Slider, {
-                  modelValue: draft.ior,
-                  min: 1.0, max: 3.0, step: 0.05,
+                  modelValue: draft.ior, min: 1.0, max: 3.0, step: 0.05,
                   showValue: true, valueSuffix: '',
                   'onUpdate:modelValue': function (v) { draft.ior = Number(v); saveNow(); },
                 }),
@@ -466,10 +501,27 @@ export function activate(ctx) {
               h('div', { class: 'settings-item', style: 'display: flex; flex-direction: column; gap: 4px; padding-top: 8px; padding-bottom: 8px;' }, [
                 h('div', { style: 'font-weight: 500; font-size: 13px; color: var(--miuix-on-background);' }, '高光强度'),
                 h(Slider, {
-                  modelValue: Math.round(draft.specularOpacity * 100),
-                  min: 0, max: 100, step: 5,
+                  modelValue: Math.round(draft.specularOpacity * 100), min: 0, max: 100, step: 5,
                   showValue: true, valueSuffix: '%',
                   'onUpdate:modelValue': function (v) { draft.specularOpacity = Number(v) / 100; saveNow(); },
+                }),
+              ]),
+              // 背景不透明度
+              h('div', { class: 'settings-item', style: 'display: flex; flex-direction: column; gap: 4px; padding-top: 8px; padding-bottom: 8px;' }, [
+                h('div', { style: 'font-weight: 500; font-size: 13px; color: var(--miuix-on-background);' }, '背景不透明度'),
+                h(Slider, {
+                  modelValue: draft.bgOpacity, min: 0, max: 100, step: 5,
+                  showValue: true, valueSuffix: '%',
+                  'onUpdate:modelValue': function (v) { draft.bgOpacity = Number(v); saveNow(); },
+                }),
+              ]),
+              // 模糊度
+              h('div', { class: 'settings-item', style: 'display: flex; flex-direction: column; gap: 4px; padding-top: 8px; padding-bottom: 8px;' }, [
+                h('div', { style: 'font-weight: 500; font-size: 13px; color: var(--miuix-on-background);' }, '模糊度'),
+                h(Slider, {
+                  modelValue: draft.blurAmount, min: 0, max: 20, step: 1,
+                  showValue: true, valueSuffix: 'px',
+                  'onUpdate:modelValue': function (v) { draft.blurAmount = Number(v); saveNow(); },
                 }),
               ]),
             ]) : null,
