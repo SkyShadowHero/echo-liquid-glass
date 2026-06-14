@@ -441,7 +441,7 @@ export function activate(ctx) {
     specularOpacity: 0.2,
     bgOpacity: 20,
     blurAmount: 0,
-    borderEnabled: true,
+    borderEnabled: false,
     glowEnabled: false,
     glowWhite: false,
     glowRadius: 200,
@@ -465,7 +465,7 @@ export function activate(ctx) {
       glowRadius: liquidGlassParams.glowRadius,
     });
     ctx.storage.get('liquid-glass-settings').then(function (saved) {
-      var enabled = saved && typeof saved.enabled === 'boolean' ? saved.enabled : true;
+      var enabled = saved && typeof saved.enabled === 'boolean' ? saved.enabled : false;
       if (enabled) liquidGlass.mount();
       if (saved) {
         var p = {};
@@ -509,7 +509,7 @@ export function activate(ctx) {
   var SettingsPanel = defineComponent({
     setup: function () {
       var draft = reactive({
-        enabled: true,
+        enabled: false,
         thickness: liquidGlassParams.thickness,
         bezelWidth: liquidGlassParams.bezelWidth,
         ior: liquidGlassParams.ior,
@@ -524,7 +524,7 @@ export function activate(ctx) {
 
       ctx.storage.get('liquid-glass-settings').then(function (saved) {
         if (saved && typeof saved === 'object') {
-          draft.enabled = typeof saved.enabled === 'boolean' ? saved.enabled : true;
+          draft.enabled = typeof saved.enabled === 'boolean' ? saved.enabled : false;
           if (typeof saved.thickness === 'number') draft.thickness = saved.thickness;
           if (typeof saved.bezelWidth === 'number') draft.bezelWidth = saved.bezelWidth;
           if (typeof saved.ior === 'number') draft.ior = saved.ior;
@@ -587,7 +587,7 @@ export function activate(ctx) {
         return h('div', { style: 'display: flex; flex-direction: column; align-items: center; gap: 8px;' }, [
           h('div', { class: 'settings-card', style: 'border-radius: 16px; overflow: hidden; width: 100%;' }, [
             // 折射开关
-            h('div', { class: 'settings-item', style: 'display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;' }, [
+            h('div', { class: 'settings-item', style: 'display: flex; justify-content: space-between; align-items: center; gap: 12px;' }, [
               h('div', { style: 'flex: 1; min-width: 0;' }, [
                 h('div', { style: 'font-weight: 600; font-size: 14px; color: var(--miuix-on-background); line-height: 1.4;' }, '液态玻璃折射'),
                 h('div', { style: 'font-size: 12px; color: var(--miuix-on-background); opacity: 0.6; margin-top: 2px; line-height: 1.5;' }, '底部音乐控件的 iOS 风格液态玻璃折射效果'),
@@ -655,7 +655,7 @@ export function activate(ctx) {
               ]),
             ]) : null,
             // 描边
-            h('div', { class: 'settings-item', style: 'display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;' }, [
+            h('div', { class: 'settings-item', style: 'display: flex; justify-content: space-between; align-items: center; gap: 12px;' }, [
               h('div', { style: 'flex: 1; min-width: 0;' }, [
                 h('div', { style: 'font-weight: 600; font-size: 14px; color: var(--miuix-on-background); line-height: 1.4;' }, 'ios27样式描边'),
                 h('div', { style: 'font-size: 12px; color: var(--miuix-on-background); opacity: 0.6; margin-top: 2px; line-height: 1.5;' }, '音乐控件添加ios27的左右黑色与上下白色高光'),
@@ -666,7 +666,7 @@ export function activate(ctx) {
               }),
             ]),
             // 光效
-            h('div', { class: 'settings-item', style: 'display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;' }, [
+            h('div', { class: 'settings-item', style: 'display: flex; justify-content: space-between; align-items: center; gap: 12px;' }, [
               h('div', { style: 'flex: 1; min-width: 0;' }, [
                 h('div', { style: 'font-weight: 600; font-size: 14px; color: var(--miuix-on-background); line-height: 1.4;' }, '鸿蒙样式光效'),
                 h('div', { style: 'font-size: 12px; color: var(--miuix-on-background); opacity: 0.6; margin-top: 2px; line-height: 1.5;' }, '音乐控件添加鼠标悬停时跟随鼠标的鸿蒙样式光效'),
@@ -677,7 +677,7 @@ export function activate(ctx) {
               }),
             ]),
             // 光效颜色
-            draft.glowEnabled ? h('div', { class: 'settings-item', style: 'display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;' }, [
+            draft.glowEnabled ? h('div', { class: 'settings-item', style: 'display: flex; justify-content: space-between; align-items: center; gap: 12px;' }, [
               h('div', { style: 'flex: 1; min-width: 0;' }, [
                 h('div', { style: 'font-weight: 600; font-size: 14px; color: var(--miuix-on-background); line-height: 1.4;' }, '白色光效'),
                 h('div', { style: 'font-size: 12px; color: var(--miuix-on-background); opacity: 0.6; margin-top: 2px; line-height: 1.5;' }, '开启使用白色光效，浅色模式下可能不明显'),
