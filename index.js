@@ -177,6 +177,7 @@ function LiquidGlassManager(opts) {
   this._specularOpacity = opts.specularOpacity != null ? opts.specularOpacity : 0.2;
   this._bgOpacity = opts.bgOpacity != null ? opts.bgOpacity : 20;
   this._blurAmount = opts.blurAmount != null ? opts.blurAmount : 0;
+  this._borderEnabled = opts.borderEnabled != null ? opts.borderEnabled : true;
   this._active = false;
   this._rebuildTimer = null;
   this._resizeObserver = null;
@@ -195,6 +196,9 @@ LiquidGlassManager.prototype.mount = function () {
   });
   this._resizeObserver.observe(this._el);
   this._el.classList.add('liquid-glass-refraction');
+  if (this._borderEnabled) {
+    this._el.classList.add('liquid-glass-border');
+  }
   this._active = true;
 };
 
@@ -211,6 +215,7 @@ LiquidGlassManager.prototype.unmount = function () {
     this._el.style.removeProperty('-webkit-backdrop-filter');
     this._el.style.removeProperty('background');
     this._el.classList.remove('liquid-glass-refraction');
+    this._el.classList.remove('liquid-glass-border');
   }
   this._removeSVG();
 };
@@ -225,6 +230,12 @@ LiquidGlassManager.prototype.updateParams = function (opts) {
   if ('specularOpacity' in opts) { this._specularOpacity = opts.specularOpacity; needRebuild = true; }
   if ('bgOpacity' in opts) { this._bgOpacity = opts.bgOpacity; needCSS = true; }
   if ('blurAmount' in opts) { this._blurAmount = opts.blurAmount; needCSS = true; }
+  if ('borderEnabled' in opts) {
+    this._borderEnabled = opts.borderEnabled;
+    if (this._el) {
+      this._el.classList.toggle('liquid-glass-border', this._borderEnabled);
+    }
+  }
   if (this._active) {
     if (needRebuild) this._scheduleRebuild();
     if (needCSS) this._applyCSS();
@@ -239,6 +250,7 @@ LiquidGlassManager.prototype.getParams = function () {
     specularOpacity: this._specularOpacity,
     bgOpacity: this._bgOpacity,
     blurAmount: this._blurAmount,
+    borderEnabled: this._borderEnabled,
   };
 };
 
@@ -342,6 +354,7 @@ export function activate(ctx) {
     specularOpacity: 0.2,
     bgOpacity: 20,
     blurAmount: 0,
+    borderEnabled: true,
   };
 
   // 等待 player-bar 出现后初始化液态玻璃
@@ -356,6 +369,7 @@ export function activate(ctx) {
       specularOpacity: liquidGlassParams.specularOpacity,
       bgOpacity: liquidGlassParams.bgOpacity,
       blurAmount: liquidGlassParams.blurAmount,
+      borderEnabled: liquidGlassParams.borderEnabled,
     });
     ctx.storage.get('liquid-glass-settings').then(function (saved) {
       var enabled = saved && typeof saved.enabled === 'boolean' ? saved.enabled : true;
@@ -368,6 +382,7 @@ export function activate(ctx) {
         if (typeof saved.specularOpacity === 'number') { p.specularOpacity = saved.specularOpacity; liquidGlassParams.specularOpacity = saved.specularOpacity; }
         if (typeof saved.bgOpacity === 'number') { p.bgOpacity = saved.bgOpacity; liquidGlassParams.bgOpacity = saved.bgOpacity; }
         if (typeof saved.blurAmount === 'number') { p.blurAmount = saved.blurAmount; liquidGlassParams.blurAmount = saved.blurAmount; }
+        if (typeof saved.borderEnabled === 'boolean') { p.borderEnabled = saved.borderEnabled; liquidGlassParams.borderEnabled = saved.borderEnabled; }
         liquidGlass.updateParams(p);
       }
     });
@@ -405,6 +420,7 @@ export function activate(ctx) {
         specularOpacity: liquidGlassParams.specularOpacity,
         bgOpacity: liquidGlassParams.bgOpacity,
         blurAmount: liquidGlassParams.blurAmount,
+        borderEnabled: liquidGlassParams.borderEnabled,
       });
 
       ctx.storage.get('liquid-glass-settings').then(function (saved) {
@@ -416,6 +432,7 @@ export function activate(ctx) {
           if (typeof saved.specularOpacity === 'number') draft.specularOpacity = saved.specularOpacity;
           if (typeof saved.bgOpacity === 'number') draft.bgOpacity = saved.bgOpacity;
           if (typeof saved.blurAmount === 'number') draft.blurAmount = saved.blurAmount;
+          if (typeof saved.borderEnabled === 'boolean') draft.borderEnabled = saved.borderEnabled;
         }
       });
 
@@ -428,6 +445,7 @@ export function activate(ctx) {
           specularOpacity: draft.specularOpacity,
           bgOpacity: draft.bgOpacity,
           blurAmount: draft.blurAmount,
+          borderEnabled: draft.borderEnabled,
         });
         if (liquidGlass) {
           if (draft.enabled) {
@@ -438,6 +456,7 @@ export function activate(ctx) {
               specularOpacity: draft.specularOpacity,
               bgOpacity: draft.bgOpacity,
               blurAmount: draft.blurAmount,
+              borderEnabled: draft.borderEnabled,
             });
             liquidGlass.mount();
           } else {
@@ -449,6 +468,7 @@ export function activate(ctx) {
           liquidGlassParams.specularOpacity = draft.specularOpacity;
           liquidGlassParams.bgOpacity = draft.bgOpacity;
           liquidGlassParams.blurAmount = draft.blurAmount;
+          liquidGlassParams.borderEnabled = draft.borderEnabled;
         }
       }
 
@@ -523,6 +543,17 @@ export function activate(ctx) {
                 }),
               ]),
             ]) : null,
+            // 左右描边
+            h('div', { class: 'settings-item', style: 'display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;' }, [
+              h('div', { style: 'flex: 1; min-width: 0;' }, [
+                h('div', { style: 'font-weight: 600; font-size: 14px; color: var(--miuix-on-background); line-height: 1.4;' }, '左右黑色描边'),
+                h('div', { style: 'font-size: 12px; color: var(--miuix-on-background); opacity: 0.6; margin-top: 2px; line-height: 1.5;' }, '音乐控件左右两侧 0.5px 黑色描边'),
+              ]),
+              h(Switch, {
+                modelValue: draft.borderEnabled,
+                'onUpdate:modelValue': function (v) { draft.borderEnabled = Boolean(v); saveNow(); },
+              }),
+            ]),
             // GitHub
             h('div', { class: 'settings-item', style: 'display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;' }, [
               h('div', { style: 'flex: 1; min-width: 0;' }, [
