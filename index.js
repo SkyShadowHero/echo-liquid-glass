@@ -543,11 +543,11 @@ export function activate(ctx) {
                 }),
               ]),
             ]) : null,
-            // 左右描边
+            // 描边
             h('div', { class: 'settings-item', style: 'display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;' }, [
               h('div', { style: 'flex: 1; min-width: 0;' }, [
-                h('div', { style: 'font-weight: 600; font-size: 14px; color: var(--miuix-on-background); line-height: 1.4;' }, '左右黑色描边'),
-                h('div', { style: 'font-size: 12px; color: var(--miuix-on-background); opacity: 0.6; margin-top: 2px; line-height: 1.5;' }, '音乐控件左右两侧 0.5px 黑色描边'),
+                h('div', { style: 'font-weight: 600; font-size: 14px; color: var(--miuix-on-background); line-height: 1.4;' }, 'ios27样式描边'),
+                h('div', { style: 'font-size: 12px; color: var(--miuix-on-background); opacity: 0.6; margin-top: 2px; line-height: 1.5;' }, '音乐控件添加ios27的左右黑色与上下白色高光'),
               ]),
               h(Switch, {
                 modelValue: draft.borderEnabled,
