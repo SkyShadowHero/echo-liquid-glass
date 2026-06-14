@@ -178,10 +178,14 @@ function LiquidGlassManager(opts) {
   this._bgOpacity = opts.bgOpacity != null ? opts.bgOpacity : 20;
   this._blurAmount = opts.blurAmount != null ? opts.blurAmount : 0;
   this._borderEnabled = opts.borderEnabled != null ? opts.borderEnabled : true;
+  this._glowEnabled = opts.glowEnabled != null ? opts.glowEnabled : false;
+  this._glowWhite = opts.glowWhite != null ? opts.glowWhite : false;
+  this._glowRadius = opts.glowRadius != null ? opts.glowRadius : 200;
   this._active = false;
   this._rebuildTimer = null;
   this._resizeObserver = null;
   this._svgEl = null;
+  this._glowHandler = null;
 }
 
 LiquidGlassManager.prototype.mount = function () {
@@ -198,6 +202,27 @@ LiquidGlassManager.prototype.mount = function () {
   this._el.classList.add('liquid-glass-refraction');
   if (this._borderEnabled) {
     this._el.classList.add('liquid-glass-border');
+  }
+  if (this._glowEnabled) {
+    this._el.classList.add('liquid-glass-glow');
+    this._applyGlowColor();
+    this._applyGlowRadius();
+    var self = this;
+    this._glowPending = false;
+    this._glowHandler = function (e) {
+      self._glowX = e.clientX;
+      self._glowY = e.clientY;
+      if (self._glowPending) return;
+      self._glowPending = true;
+      var el = self._el;
+      requestAnimationFrame(function () {
+        var rect = el.getBoundingClientRect();
+        el.style.setProperty('--glow-x', (self._glowX - rect.left) + 'px');
+        el.style.setProperty('--glow-y', (self._glowY - rect.top) + 'px');
+        self._glowPending = false;
+      });
+    };
+    this._el.addEventListener('mousemove', this._glowHandler);
   }
   this._active = true;
 };
@@ -216,6 +241,11 @@ LiquidGlassManager.prototype.unmount = function () {
     this._el.style.removeProperty('background');
     this._el.classList.remove('liquid-glass-refraction');
     this._el.classList.remove('liquid-glass-border');
+    if (this._glowHandler) {
+      this._el.removeEventListener('mousemove', this._glowHandler);
+      this._glowHandler = null;
+    }
+    this._el.classList.remove('liquid-glass-glow');
   }
   this._removeSVG();
 };
@@ -236,6 +266,50 @@ LiquidGlassManager.prototype.updateParams = function (opts) {
       this._el.classList.toggle('liquid-glass-border', this._borderEnabled);
     }
   }
+    if ('glowEnabled' in opts) {
+    this._glowEnabled = opts.glowEnabled;
+    if (this._el) {
+      this._el.classList.toggle('liquid-glass-glow', this._glowEnabled);
+      if (this._glowEnabled) {
+        if (!this._glowHandler) {
+          var self = this;
+          this._glowPending = false;
+          this._glowHandler = function (e) {
+            self._glowX = e.clientX;
+            self._glowY = e.clientY;
+            if (self._glowPending) return;
+            self._glowPending = true;
+            var el = self._el;
+            requestAnimationFrame(function () {
+              var rect = el.getBoundingClientRect();
+              el.style.setProperty('--glow-x', (self._glowX - rect.left) + 'px');
+              el.style.setProperty('--glow-y', (self._glowY - rect.top) + 'px');
+              self._glowPending = false;
+            });
+          };
+          this._el.addEventListener('mousemove', this._glowHandler);
+        }
+        this._applyGlowColor();
+      } else {
+        if (this._glowHandler) {
+          this._el.removeEventListener('mousemove', this._glowHandler);
+          this._glowHandler = null;
+        }
+      }
+    }
+  }
+  if ('glowWhite' in opts) {
+    this._glowWhite = opts.glowWhite;
+    if (this._el && this._glowEnabled) {
+      this._applyGlowColor();
+    }
+  }
+  if ('glowRadius' in opts) {
+    this._glowRadius = opts.glowRadius;
+    if (this._el && this._glowEnabled) {
+      this._applyGlowRadius();
+    }
+  }
   if (this._active) {
     if (needRebuild) this._scheduleRebuild();
     if (needCSS) this._applyCSS();
@@ -251,6 +325,9 @@ LiquidGlassManager.prototype.getParams = function () {
     bgOpacity: this._bgOpacity,
     blurAmount: this._blurAmount,
     borderEnabled: this._borderEnabled,
+    glowEnabled: this._glowEnabled,
+    glowWhite: this._glowWhite,
+    glowRadius: this._glowRadius,
   };
 };
 
@@ -332,6 +409,16 @@ LiquidGlassManager.prototype._applyCSS = function () {
   this._applyBackdropFilter();
 };
 
+LiquidGlassManager.prototype._applyGlowColor = function () {
+  if (!this._el) return;
+  this._el.style.setProperty('--glow-color', this._glowWhite ? 'white' : 'var(--color-primary)');
+};
+
+LiquidGlassManager.prototype._applyGlowRadius = function () {
+  if (!this._el) return;
+  this._el.style.setProperty('--glow-radius', this._glowRadius + 'px');
+};
+
 LiquidGlassManager.prototype._scheduleRebuild = function () {
   clearTimeout(this._rebuildTimer);
   var self = this;
@@ -355,6 +442,9 @@ export function activate(ctx) {
     bgOpacity: 20,
     blurAmount: 0,
     borderEnabled: true,
+    glowEnabled: false,
+    glowWhite: false,
+    glowRadius: 200,
   };
 
   // 等待 player-bar 出现后初始化液态玻璃
@@ -370,6 +460,9 @@ export function activate(ctx) {
       bgOpacity: liquidGlassParams.bgOpacity,
       blurAmount: liquidGlassParams.blurAmount,
       borderEnabled: liquidGlassParams.borderEnabled,
+      glowEnabled: liquidGlassParams.glowEnabled,
+      glowWhite: liquidGlassParams.glowWhite,
+      glowRadius: liquidGlassParams.glowRadius,
     });
     ctx.storage.get('liquid-glass-settings').then(function (saved) {
       var enabled = saved && typeof saved.enabled === 'boolean' ? saved.enabled : true;
@@ -383,6 +476,9 @@ export function activate(ctx) {
         if (typeof saved.bgOpacity === 'number') { p.bgOpacity = saved.bgOpacity; liquidGlassParams.bgOpacity = saved.bgOpacity; }
         if (typeof saved.blurAmount === 'number') { p.blurAmount = saved.blurAmount; liquidGlassParams.blurAmount = saved.blurAmount; }
         if (typeof saved.borderEnabled === 'boolean') { p.borderEnabled = saved.borderEnabled; liquidGlassParams.borderEnabled = saved.borderEnabled; }
+        if (typeof saved.glowEnabled === 'boolean') { p.glowEnabled = saved.glowEnabled; liquidGlassParams.glowEnabled = saved.glowEnabled; }
+        if (typeof saved.glowWhite === 'boolean') { p.glowWhite = saved.glowWhite; liquidGlassParams.glowWhite = saved.glowWhite; }
+        if (typeof saved.glowRadius === 'number') { p.glowRadius = saved.glowRadius; liquidGlassParams.glowRadius = saved.glowRadius; }
         liquidGlass.updateParams(p);
       }
     });
@@ -421,6 +517,9 @@ export function activate(ctx) {
         bgOpacity: liquidGlassParams.bgOpacity,
         blurAmount: liquidGlassParams.blurAmount,
         borderEnabled: liquidGlassParams.borderEnabled,
+        glowEnabled: liquidGlassParams.glowEnabled,
+        glowWhite: liquidGlassParams.glowWhite,
+        glowRadius: liquidGlassParams.glowRadius,
       });
 
       ctx.storage.get('liquid-glass-settings').then(function (saved) {
@@ -433,6 +532,9 @@ export function activate(ctx) {
           if (typeof saved.bgOpacity === 'number') draft.bgOpacity = saved.bgOpacity;
           if (typeof saved.blurAmount === 'number') draft.blurAmount = saved.blurAmount;
           if (typeof saved.borderEnabled === 'boolean') draft.borderEnabled = saved.borderEnabled;
+          if (typeof saved.glowEnabled === 'boolean') draft.glowEnabled = saved.glowEnabled;
+          if (typeof saved.glowWhite === 'boolean') draft.glowWhite = saved.glowWhite;
+          if (typeof saved.glowRadius === 'number') draft.glowRadius = saved.glowRadius;
         }
       });
 
@@ -446,6 +548,9 @@ export function activate(ctx) {
           bgOpacity: draft.bgOpacity,
           blurAmount: draft.blurAmount,
           borderEnabled: draft.borderEnabled,
+          glowEnabled: draft.glowEnabled,
+          glowWhite: draft.glowWhite,
+          glowRadius: draft.glowRadius,
         });
         if (liquidGlass) {
           if (draft.enabled) {
@@ -457,6 +562,9 @@ export function activate(ctx) {
               bgOpacity: draft.bgOpacity,
               blurAmount: draft.blurAmount,
               borderEnabled: draft.borderEnabled,
+              glowEnabled: draft.glowEnabled,
+              glowWhite: draft.glowWhite,
+              glowRadius: draft.glowRadius,
             });
             liquidGlass.mount();
           } else {
@@ -469,6 +577,9 @@ export function activate(ctx) {
           liquidGlassParams.bgOpacity = draft.bgOpacity;
           liquidGlassParams.blurAmount = draft.blurAmount;
           liquidGlassParams.borderEnabled = draft.borderEnabled;
+          liquidGlassParams.glowEnabled = draft.glowEnabled;
+          liquidGlassParams.glowWhite = draft.glowWhite;
+          liquidGlassParams.glowRadius = draft.glowRadius;
         }
       }
 
@@ -554,6 +665,37 @@ export function activate(ctx) {
                 'onUpdate:modelValue': function (v) { draft.borderEnabled = Boolean(v); saveNow(); },
               }),
             ]),
+            // 光效
+            h('div', { class: 'settings-item', style: 'display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;' }, [
+              h('div', { style: 'flex: 1; min-width: 0;' }, [
+                h('div', { style: 'font-weight: 600; font-size: 14px; color: var(--miuix-on-background); line-height: 1.4;' }, '鸿蒙样式光效'),
+                h('div', { style: 'font-size: 12px; color: var(--miuix-on-background); opacity: 0.6; margin-top: 2px; line-height: 1.5;' }, '音乐控件添加鼠标悬停时跟随鼠标的鸿蒙样式光效'),
+              ]),
+              h(Switch, {
+                modelValue: draft.glowEnabled,
+                'onUpdate:modelValue': function (v) { draft.glowEnabled = Boolean(v); saveNow(); },
+              }),
+            ]),
+            // 光效颜色
+            draft.glowEnabled ? h('div', { class: 'settings-item', style: 'display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;' }, [
+              h('div', { style: 'flex: 1; min-width: 0;' }, [
+                h('div', { style: 'font-weight: 600; font-size: 14px; color: var(--miuix-on-background); line-height: 1.4;' }, '白色光效'),
+                h('div', { style: 'font-size: 12px; color: var(--miuix-on-background); opacity: 0.6; margin-top: 2px; line-height: 1.5;' }, '开启使用白色光效，浅色模式下可能不明显'),
+              ]),
+              h(Switch, {
+                modelValue: draft.glowWhite,
+                'onUpdate:modelValue': function (v) { draft.glowWhite = Boolean(v); saveNow(); },
+              }),
+            ]) : null,
+            // 光效半径
+            draft.glowEnabled ? h('div', { class: 'settings-item', style: 'display: flex; flex-direction: column; gap: 4px; padding-top: 8px; padding-bottom: 8px;' }, [
+              h('div', { style: 'font-weight: 500; font-size: 13px; color: var(--miuix-on-background);' }, '光效半径'),
+              h(Slider, {
+                modelValue: draft.glowRadius, min: 60, max: 400, step: 10,
+                showValue: true, valueSuffix: 'px',
+                'onUpdate:modelValue': function (v) { draft.glowRadius = Number(v); saveNow(); },
+              }),
+            ]) : null,
             // GitHub
             h('div', { class: 'settings-item', style: 'display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;' }, [
               h('div', { style: 'flex: 1; min-width: 0;' }, [
