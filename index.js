@@ -171,12 +171,12 @@ function LiquidGlassManager(opts) {
   }
   this._filterId = 'liquid-glass-refraction-filter';
   this._svgId = 'liquid-glass-refraction-svg';
-  this._thickness = opts.thickness != null ? opts.thickness : 60;
+  this._thickness = opts.thickness != null ? opts.thickness : 100;
   this._bezelWidth = opts.bezelWidth != null ? opts.bezelWidth : 40;
   this._ior = opts.ior != null ? opts.ior : 2.5;
-  this._specularOpacity = opts.specularOpacity != null ? opts.specularOpacity : 0.2;
-  this._bgOpacity = opts.bgOpacity != null ? opts.bgOpacity : 20;
-  this._blurAmount = opts.blurAmount != null ? opts.blurAmount : 0;
+  this._specularOpacity = opts.specularOpacity != null ? opts.specularOpacity : 0.5;
+  this._bgOpacity = opts.bgOpacity != null ? opts.bgOpacity : 50;
+  this._blurAmount = opts.blurAmount != null ? opts.blurAmount : 2;
   this._borderEnabled = opts.borderEnabled != null ? opts.borderEnabled : true;
   this._glowEnabled = opts.glowEnabled != null ? opts.glowEnabled : false;
   this._glowWhite = opts.glowWhite != null ? opts.glowWhite : false;
@@ -435,12 +435,12 @@ LiquidGlassManager.prototype._scheduleRebuild = function () {
 export function activate(ctx) {
   var liquidGlass = null;
   var liquidGlassParams = {
-    thickness: 60,
+    thickness: 100,
     bezelWidth: 40,
     ior: 2.5,
-    specularOpacity: 0.2,
-    bgOpacity: 20,
-    blurAmount: 0,
+    specularOpacity: 0.5,
+    bgOpacity: 50,
+    blurAmount: 2,
     borderEnabled: false,
     glowEnabled: false,
     glowWhite: false,
