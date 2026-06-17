@@ -4,6 +4,12 @@
   -webkit-backdrop-filter: none !important;
 }
 
+/* 确保 player-bar 是相对定位，以便绝对定位的伪元素正常工作 */
+.player-bar.liquid-glass-glow,
+.player-bar.liquid-glass-border-glow {
+  position: relative;
+}
+
 /* ios玻璃描边 */
 .player-bar.liquid-glass-border {
   box-shadow: inset 0.5px 0 0 0 rgba(0,0,0,0.2), inset -0.5px 0 0 0 rgba(0,0,0,0.2), inset 0 0.5px 0 0 rgba(255,255,255,0.2), inset 0 -0.5px 0 0 rgba(255,255,255,0.2) !important;
@@ -37,4 +43,38 @@
 }
 .player-bar.liquid-glass-glow:active::after {
   opacity: 0.55;
+}
+
+/* ── 鸿蒙边框光效 ── */
+/* ::before 伪元素：2px 内边框通过 mask 只在光效区域显示 */
+.player-bar.liquid-glass-border-glow::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--glow-color, var(--color-primary)) 90%, transparent);
+  mask: radial-gradient(circle var(--border-glow-radius, 140px) at var(--glow-x, 80%) var(--glow-y, 80%),
+    black 0%,
+    black 10%,
+    rgba(0,0,0,0.4) 25%,
+    rgba(0,0,0,0.08) 40%,
+    transparent 55%
+  );
+  -webkit-mask: radial-gradient(circle var(--border-glow-radius, 140px) at var(--glow-x, 80%) var(--glow-y, 80%),
+    black 0%,
+    black 10%,
+    rgba(0,0,0,0.4) 25%,
+    rgba(0,0,0,0.08) 40%,
+    transparent 55%
+  );
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+.player-bar.liquid-glass-border-glow:hover::before {
+  opacity: 1;
+}
+.player-bar.liquid-glass-border-glow:active::before {
+  opacity: 1;
 }

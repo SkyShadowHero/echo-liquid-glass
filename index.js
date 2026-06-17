@@ -181,6 +181,7 @@ function LiquidGlassManager(opts) {
   this._glowEnabled = opts.glowEnabled != null ? opts.glowEnabled : false;
   this._glowWhite = opts.glowWhite != null ? opts.glowWhite : false;
   this._glowRadius = opts.glowRadius != null ? opts.glowRadius : 200;
+  this._borderGlowEnabled = opts.borderGlowEnabled != null ? opts.borderGlowEnabled : false;
   this._active = false;
   this._rebuildTimer = null;
   this._resizeObserver = null;
@@ -223,6 +224,9 @@ LiquidGlassManager.prototype.mount = function () {
       });
     };
     this._el.addEventListener('mousemove', this._glowHandler);
+    if (this._borderGlowEnabled) {
+      this._el.classList.add('liquid-glass-border-glow');
+    }
   }
   this._active = true;
 };
@@ -246,6 +250,7 @@ LiquidGlassManager.prototype.unmount = function () {
       this._glowHandler = null;
     }
     this._el.classList.remove('liquid-glass-glow');
+    this._el.classList.remove('liquid-glass-border-glow');
   }
   this._removeSVG();
 };
@@ -310,6 +315,16 @@ LiquidGlassManager.prototype.updateParams = function (opts) {
       this._applyGlowRadius();
     }
   }
+  if ('borderGlowEnabled' in opts) {
+    this._borderGlowEnabled = opts.borderGlowEnabled;
+    if (this._el && this._glowEnabled) {
+      if (this._borderGlowEnabled) {
+        this._el.classList.add('liquid-glass-border-glow');
+      } else {
+        this._el.classList.remove('liquid-glass-border-glow');
+      }
+    }
+  }
   if (this._active) {
     if (needRebuild) this._scheduleRebuild();
     if (needCSS) this._applyCSS();
@@ -328,6 +343,7 @@ LiquidGlassManager.prototype.getParams = function () {
     glowEnabled: this._glowEnabled,
     glowWhite: this._glowWhite,
     glowRadius: this._glowRadius,
+    borderGlowEnabled: this._borderGlowEnabled,
   };
 };
 
@@ -417,6 +433,7 @@ LiquidGlassManager.prototype._applyGlowColor = function () {
 LiquidGlassManager.prototype._applyGlowRadius = function () {
   if (!this._el) return;
   this._el.style.setProperty('--glow-radius', this._glowRadius + 'px');
+  this._el.style.setProperty('--border-glow-radius', this._glowRadius + 'px');
 };
 
 LiquidGlassManager.prototype._scheduleRebuild = function () {
@@ -445,6 +462,7 @@ export function activate(ctx) {
     glowEnabled: false,
     glowWhite: false,
     glowRadius: 200,
+    borderGlowEnabled: false,
   };
 
   // 等待 player-bar 出现后初始化液态玻璃
@@ -463,6 +481,7 @@ export function activate(ctx) {
       glowEnabled: liquidGlassParams.glowEnabled,
       glowWhite: liquidGlassParams.glowWhite,
       glowRadius: liquidGlassParams.glowRadius,
+      borderGlowEnabled: liquidGlassParams.borderGlowEnabled,
     });
     ctx.storage.get('liquid-glass-settings').then(function (saved) {
       var enabled = saved && typeof saved.enabled === 'boolean' ? saved.enabled : false;
@@ -479,6 +498,7 @@ export function activate(ctx) {
         if (typeof saved.glowEnabled === 'boolean') { p.glowEnabled = saved.glowEnabled; liquidGlassParams.glowEnabled = saved.glowEnabled; }
         if (typeof saved.glowWhite === 'boolean') { p.glowWhite = saved.glowWhite; liquidGlassParams.glowWhite = saved.glowWhite; }
         if (typeof saved.glowRadius === 'number') { p.glowRadius = saved.glowRadius; liquidGlassParams.glowRadius = saved.glowRadius; }
+        if (typeof saved.borderGlowEnabled === 'boolean') { p.borderGlowEnabled = saved.borderGlowEnabled; liquidGlassParams.borderGlowEnabled = saved.borderGlowEnabled; }
         liquidGlass.updateParams(p);
       }
     });
@@ -520,6 +540,7 @@ export function activate(ctx) {
         glowEnabled: liquidGlassParams.glowEnabled,
         glowWhite: liquidGlassParams.glowWhite,
         glowRadius: liquidGlassParams.glowRadius,
+        borderGlowEnabled: liquidGlassParams.borderGlowEnabled,
       });
 
       ctx.storage.get('liquid-glass-settings').then(function (saved) {
@@ -535,6 +556,7 @@ export function activate(ctx) {
           if (typeof saved.glowEnabled === 'boolean') draft.glowEnabled = saved.glowEnabled;
           if (typeof saved.glowWhite === 'boolean') draft.glowWhite = saved.glowWhite;
           if (typeof saved.glowRadius === 'number') draft.glowRadius = saved.glowRadius;
+          if (typeof saved.borderGlowEnabled === 'boolean') draft.borderGlowEnabled = saved.borderGlowEnabled;
         }
       });
 
@@ -551,6 +573,7 @@ export function activate(ctx) {
           glowEnabled: draft.glowEnabled,
           glowWhite: draft.glowWhite,
           glowRadius: draft.glowRadius,
+          borderGlowEnabled: draft.borderGlowEnabled,
         });
         if (liquidGlass) {
           if (draft.enabled) {
@@ -565,6 +588,7 @@ export function activate(ctx) {
               glowEnabled: draft.glowEnabled,
               glowWhite: draft.glowWhite,
               glowRadius: draft.glowRadius,
+              borderGlowEnabled: draft.borderGlowEnabled,
             });
             liquidGlass.mount();
           } else {
@@ -580,6 +604,7 @@ export function activate(ctx) {
           liquidGlassParams.glowEnabled = draft.glowEnabled;
           liquidGlassParams.glowWhite = draft.glowWhite;
           liquidGlassParams.glowRadius = draft.glowRadius;
+          liquidGlassParams.borderGlowEnabled = draft.borderGlowEnabled;
         }
       }
 
@@ -696,6 +721,21 @@ export function activate(ctx) {
                 'onUpdate:modelValue': function (v) { draft.glowRadius = Number(v); saveNow(); },
               }),
             ]) : null,
+            // 边框光效（依赖鸿蒙光效开启）
+            draft.glowEnabled ? [
+              h('div', { class: 'settings-item', style: 'display: flex; justify-content: space-between; align-items: center; gap: 12px;' }, [
+                h('div', { style: 'flex: 1; min-width: 0;' }, [
+                  h('div', { style: 'font-weight: 600; font-size: 14px; color: var(--miuix-on-background); line-height: 1.4;' }, '边框光效'),
+                  h('div', { style: 'font-size: 12px; color: var(--miuix-on-background); opacity: 0.6; margin-top: 2px; line-height: 1.5;' }, '光效到达的边框区域变亮，模拟鸿蒙光效边框'),
+                ]),
+                h(Switch, {
+                  modelValue: draft.borderGlowEnabled,
+                  'onUpdate:modelValue': function (v) { draft.borderGlowEnabled = Boolean(v); saveNow(); },
+                }),
+              ]),
+              draft.borderGlowEnabled ? [
+              ] : null,
+            ] : null,
             // GitHub
             h('div', { class: 'settings-item', style: 'display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;' }, [
               h('div', { style: 'flex: 1; min-width: 0;' }, [

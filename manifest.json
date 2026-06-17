@@ -1,7 +1,7 @@
 {
   "id": "echo-liquid-glass",
   "name": "Echo液态折射",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "description": "为底部音乐控件添加液态折射效果，可调整参数至ios或鸿蒙的效果。需要配合 echo-miuix-plugin 使用(沉浸式底栏支持)",
   "author": "天影大侠",
   "icon": "icon.svg",
