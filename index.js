@@ -427,7 +427,9 @@ LiquidGlassManager.prototype._applyCSS = function () {
 
 LiquidGlassManager.prototype._applyGlowColor = function () {
   if (!this._el) return;
-  this._el.style.setProperty('--glow-color', this._glowWhite ? 'white' : 'var(--color-primary)');
+  this._el.style.setProperty('--glow-color', this._glowWhite ? 'color-mix(in srgb, white 90%, var(--color-primary) 10%)' : 'var(--color-primary)');
+  // 白色光效时压暗背景，浅色模式下才能看到白色光效的对比
+  this._el.style.filter = this._glowWhite ? 'brightness(0.96)' : '';
 };
 
 LiquidGlassManager.prototype._applyGlowRadius = function () {
