@@ -518,6 +518,30 @@ export function activate(ctx) {
   tryInitLiquidGlass();
   ctx.dispose(function () { barObserver.disconnect(); });
 
+  // ── 悬浮底栏（miuix 已启用则跳过）──
+  if (!document.documentElement.classList.contains('miuix-bg-active')) {
+    ctx.css.inject(
+      '.player-bar { padding-left:16px !important; padding-right:16px !important; border-radius:9999px !important; }' +
+      '.player-bar-container { position:absolute !important; bottom:8px !important; left:0 !important; right:0 !important; padding-bottom:0 !important; }' +
+      '.player-bar .rounded-\\[10px\\] { border-radius:9999px !important; }' +
+      '.back-to-top-btn { bottom:100px !important; }'
+    );
+    // 页面底部留白（和 miuix 一致：选 .scrollbar-view 加 spacer）
+    function addSpacers() {
+      var views = document.querySelectorAll('.scrollbar-view:not(.lg-padded)');
+      views.forEach(function(v) {
+        v.classList.add('lg-padded');
+        var s = document.createElement('div');
+        s.style.cssText = 'height:100px;flex-shrink:0;pointer-events:none;';
+        v.appendChild(s);
+      });
+    }
+    addSpacers();
+    var spObs = new MutationObserver(addSpacers);
+    spObs.observe(document.body, { childList: true, subtree: true });
+    ctx.dispose(function() { spObs.disconnect(); });
+  }
+
   // ── 设置面板 ──
   var vue = ctx.vue;
   var defineComponent = vue.defineComponent;
