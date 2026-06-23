@@ -530,6 +530,10 @@ export function activate(ctx) {
 
   var SettingsPanel = defineComponent({
     setup: function () {
+      var _isMiuix4 = document.documentElement.classList.contains('miuix-bg-active');
+      var _mc4 = _isMiuix4 ? 'settings-card' : '';
+      var _mi4 = _isMiuix4 ? 'settings-item' : '';
+      var _onBg4 = _isMiuix4 ? 'var(--miuix-on-background)' : 'var(--color-text-main)';
       var draft = reactive({
         enabled: false,
         thickness: liquidGlassParams.thickness,
@@ -612,12 +616,12 @@ export function activate(ctx) {
 
       return function () {
         return h('div', { style: 'display: flex; flex-direction: column; align-items: center; gap: 8px;' }, [
-          h('div', { class: 'settings-card', style: 'border-radius: 16px; overflow: hidden; width: 100%;' }, [
+          h('div', { class: _mc4, style: _isMiuix4 ? 'border-radius: 16px; overflow: hidden; width: 100%;' : 'width:100%' }, [
             // 折射开关
-            h('div', { class: 'settings-item', style: 'display: flex; justify-content: space-between; align-items: center; gap: 12px;' }, [
+            h('div', { class: _mi4, style: 'display: flex; justify-content: space-between; align-items: center; gap: 12px;' }, [
               h('div', { style: 'flex: 1; min-width: 0;' }, [
-                h('div', { style: 'font-weight: 600; font-size: 14px; color: var(--miuix-on-background); line-height: 1.4;' }, '液态玻璃折射'),
-                h('div', { style: 'font-size: 12px; color: var(--miuix-on-background); opacity: 0.6; margin-top: 2px; line-height: 1.5;' }, '底部音乐控件的 iOS 风格液态玻璃折射效果'),
+                h('div', { style: 'font-weight: 600; font-size: 14px; color: ' + _onBg4 + '; line-height: 1.4;' }, '液态玻璃折射'),
+                h('div', { style: 'font-size: 12px; color: ' + _onBg4 + '; opacity: 0.6; margin-top: 2px; line-height: 1.5;' }, '底部音乐控件的 iOS 风格液态玻璃折射效果'),
               ]),
               h(Switch, {
                 modelValue: draft.enabled,
@@ -625,10 +629,10 @@ export function activate(ctx) {
               }),
             ]),
             // 参数调节
-            draft.enabled ? h('div', { class: 'settings-card', style: 'border-radius: 0; overflow: visible; width: 100%; padding: 4px 0;' }, [
+            draft.enabled ? h('div', { class: _mc4, style: _isMiuix4 ? 'border-radius: 0; overflow: visible; width: 100%; padding: 4px 0;' : 'width:100%' }, [
               // 玻璃厚度
-              h('div', { class: 'settings-item', style: 'display: flex; flex-direction: column; gap: 4px; padding-top: 8px; padding-bottom: 8px;' }, [
-                h('div', { style: 'font-weight: 500; font-size: 13px; color: var(--miuix-on-background);' }, '玻璃厚度'),
+              h('div', { class: _mi4, style: 'display: flex; flex-direction: column; gap: 4px; padding-top: 8px; padding-bottom: 8px;' }, [
+                h('div', { style: 'font-weight: 500; font-size: 13px; color: ' + _onBg4 + ';' }, '玻璃厚度'),
                 h(Slider, {
                   modelValue: draft.thickness, min: 10, max: 200, step: 5,
                   showValue: true, valueSuffix: 'px',
@@ -636,8 +640,8 @@ export function activate(ctx) {
                 }),
               ]),
               // 折射区域
-              h('div', { class: 'settings-item', style: 'display: flex; flex-direction: column; gap: 4px; padding-top: 8px; padding-bottom: 8px;' }, [
-                h('div', { style: 'font-weight: 500; font-size: 13px; color: var(--miuix-on-background);' }, '折射区域'),
+              h('div', { class: _mi4, style: 'display: flex; flex-direction: column; gap: 4px; padding-top: 8px; padding-bottom: 8px;' }, [
+                h('div', { style: 'font-weight: 500; font-size: 13px; color: ' + _onBg4 + ';' }, '折射区域'),
                 h(Slider, {
                   modelValue: draft.bezelWidth, min: 2, max: 60, step: 2,
                   showValue: true, valueSuffix: 'px',
@@ -645,8 +649,8 @@ export function activate(ctx) {
                 }),
               ]),
               // 折射率
-              h('div', { class: 'settings-item', style: 'display: flex; flex-direction: column; gap: 4px; padding-top: 8px; padding-bottom: 8px;' }, [
-                h('div', { style: 'font-weight: 500; font-size: 13px; color: var(--miuix-on-background);' }, '折射率 (IOR)'),
+              h('div', { class: _mi4, style: 'display: flex; flex-direction: column; gap: 4px; padding-top: 8px; padding-bottom: 8px;' }, [
+                h('div', { style: 'font-weight: 500; font-size: 13px; color: ' + _onBg4 + ';' }, '折射率 (IOR)'),
                 h(Slider, {
                   modelValue: draft.ior, min: 1.0, max: 3.0, step: 0.05,
                   showValue: true, valueSuffix: '',
@@ -654,8 +658,8 @@ export function activate(ctx) {
                 }),
               ]),
               // 高光强度
-              h('div', { class: 'settings-item', style: 'display: flex; flex-direction: column; gap: 4px; padding-top: 8px; padding-bottom: 8px;' }, [
-                h('div', { style: 'font-weight: 500; font-size: 13px; color: var(--miuix-on-background);' }, '高光强度'),
+              h('div', { class: _mi4, style: 'display: flex; flex-direction: column; gap: 4px; padding-top: 8px; padding-bottom: 8px;' }, [
+                h('div', { style: 'font-weight: 500; font-size: 13px; color: ' + _onBg4 + ';' }, '高光强度'),
                 h(Slider, {
                   modelValue: Math.round(draft.specularOpacity * 100), min: 0, max: 100, step: 5,
                   showValue: true, valueSuffix: '%',
@@ -663,8 +667,8 @@ export function activate(ctx) {
                 }),
               ]),
               // 背景不透明度
-              h('div', { class: 'settings-item', style: 'display: flex; flex-direction: column; gap: 4px; padding-top: 8px; padding-bottom: 8px;' }, [
-                h('div', { style: 'font-weight: 500; font-size: 13px; color: var(--miuix-on-background);' }, '背景不透明度'),
+              h('div', { class: _mi4, style: 'display: flex; flex-direction: column; gap: 4px; padding-top: 8px; padding-bottom: 8px;' }, [
+                h('div', { style: 'font-weight: 500; font-size: 13px; color: ' + _onBg4 + ';' }, '背景不透明度'),
                 h(Slider, {
                   modelValue: draft.bgOpacity, min: 0, max: 100, step: 5,
                   showValue: true, valueSuffix: '%',
@@ -672,8 +676,8 @@ export function activate(ctx) {
                 }),
               ]),
               // 模糊度
-              h('div', { class: 'settings-item', style: 'display: flex; flex-direction: column; gap: 4px; padding-top: 8px; padding-bottom: 8px;' }, [
-                h('div', { style: 'font-weight: 500; font-size: 13px; color: var(--miuix-on-background);' }, '模糊度'),
+              h('div', { class: _mi4, style: 'display: flex; flex-direction: column; gap: 4px; padding-top: 8px; padding-bottom: 8px;' }, [
+                h('div', { style: 'font-weight: 500; font-size: 13px; color: ' + _onBg4 + ';' }, '模糊度'),
                 h(Slider, {
                   modelValue: draft.blurAmount, min: 0, max: 20, step: 1,
                   showValue: true, valueSuffix: 'px',
@@ -682,10 +686,10 @@ export function activate(ctx) {
               ]),
             ]) : null,
             // 描边
-            h('div', { class: 'settings-item', style: 'display: flex; justify-content: space-between; align-items: center; gap: 12px;' }, [
+            h('div', { class: _mi4, style: 'display: flex; justify-content: space-between; align-items: center; gap: 12px;' }, [
               h('div', { style: 'flex: 1; min-width: 0;' }, [
-                h('div', { style: 'font-weight: 600; font-size: 14px; color: var(--miuix-on-background); line-height: 1.4;' }, 'ios27样式描边'),
-                h('div', { style: 'font-size: 12px; color: var(--miuix-on-background); opacity: 0.6; margin-top: 2px; line-height: 1.5;' }, '音乐控件添加ios27的左右黑色与上下白色高光'),
+                h('div', { style: 'font-weight: 600; font-size: 14px; color: ' + _onBg4 + '; line-height: 1.4;' }, 'ios27样式描边'),
+                h('div', { style: 'font-size: 12px; color: ' + _onBg4 + '; opacity: 0.6; margin-top: 2px; line-height: 1.5;' }, '音乐控件添加ios27的左右黑色与上下白色高光'),
               ]),
               h(Switch, {
                 modelValue: draft.borderEnabled,
@@ -693,10 +697,10 @@ export function activate(ctx) {
               }),
             ]),
             // 光效
-            h('div', { class: 'settings-item', style: 'display: flex; justify-content: space-between; align-items: center; gap: 12px;' }, [
+            h('div', { class: _mi4, style: 'display: flex; justify-content: space-between; align-items: center; gap: 12px;' }, [
               h('div', { style: 'flex: 1; min-width: 0;' }, [
-                h('div', { style: 'font-weight: 600; font-size: 14px; color: var(--miuix-on-background); line-height: 1.4;' }, '鸿蒙样式光效'),
-                h('div', { style: 'font-size: 12px; color: var(--miuix-on-background); opacity: 0.6; margin-top: 2px; line-height: 1.5;' }, '音乐控件添加鼠标悬停时跟随鼠标的鸿蒙样式光效'),
+                h('div', { style: 'font-weight: 600; font-size: 14px; color: ' + _onBg4 + '; line-height: 1.4;' }, '鸿蒙样式光效'),
+                h('div', { style: 'font-size: 12px; color: ' + _onBg4 + '; opacity: 0.6; margin-top: 2px; line-height: 1.5;' }, '音乐控件添加鼠标悬停时跟随鼠标的鸿蒙样式光效'),
               ]),
               h(Switch, {
                 modelValue: draft.glowEnabled,
@@ -704,10 +708,10 @@ export function activate(ctx) {
               }),
             ]),
             // 光效颜色
-            draft.glowEnabled ? h('div', { class: 'settings-item', style: 'display: flex; justify-content: space-between; align-items: center; gap: 12px;' }, [
+            draft.glowEnabled ? h('div', { class: _mi4, style: 'display: flex; justify-content: space-between; align-items: center; gap: 12px;' }, [
               h('div', { style: 'flex: 1; min-width: 0;' }, [
-                h('div', { style: 'font-weight: 600; font-size: 14px; color: var(--miuix-on-background); line-height: 1.4;' }, '白色光效'),
-                h('div', { style: 'font-size: 12px; color: var(--miuix-on-background); opacity: 0.6; margin-top: 2px; line-height: 1.5;' }, '开启使用白色光效，浅色模式下可能不明显'),
+                h('div', { style: 'font-weight: 600; font-size: 14px; color: ' + _onBg4 + '; line-height: 1.4;' }, '白色光效'),
+                h('div', { style: 'font-size: 12px; color: ' + _onBg4 + '; opacity: 0.6; margin-top: 2px; line-height: 1.5;' }, '开启使用白色光效，浅色模式下可能不明显'),
               ]),
               h(Switch, {
                 modelValue: draft.glowWhite,
@@ -715,8 +719,8 @@ export function activate(ctx) {
               }),
             ]) : null,
             // 光效半径
-            draft.glowEnabled ? h('div', { class: 'settings-item', style: 'display: flex; flex-direction: column; gap: 4px; padding-top: 8px; padding-bottom: 8px;' }, [
-              h('div', { style: 'font-weight: 500; font-size: 13px; color: var(--miuix-on-background);' }, '光效半径'),
+            draft.glowEnabled ? h('div', { class: _mi4, style: 'display: flex; flex-direction: column; gap: 4px; padding-top: 8px; padding-bottom: 8px;' }, [
+              h('div', { style: 'font-weight: 500; font-size: 13px; color: ' + _onBg4 + ';' }, '光效半径'),
               h(Slider, {
                 modelValue: draft.glowRadius, min: 60, max: 400, step: 10,
                 showValue: true, valueSuffix: 'px',
@@ -725,10 +729,10 @@ export function activate(ctx) {
             ]) : null,
             // 边框光效（依赖鸿蒙光效开启）
             draft.glowEnabled ? [
-              h('div', { class: 'settings-item', style: 'display: flex; justify-content: space-between; align-items: center; gap: 12px;' }, [
+              h('div', { class: _mi4, style: 'display: flex; justify-content: space-between; align-items: center; gap: 12px;' }, [
                 h('div', { style: 'flex: 1; min-width: 0;' }, [
-                  h('div', { style: 'font-weight: 600; font-size: 14px; color: var(--miuix-on-background); line-height: 1.4;' }, '边框光效'),
-                  h('div', { style: 'font-size: 12px; color: var(--miuix-on-background); opacity: 0.6; margin-top: 2px; line-height: 1.5;' }, '光效到达的边框区域变亮，模拟鸿蒙光效边框'),
+                  h('div', { style: 'font-weight: 600; font-size: 14px; color: ' + _onBg4 + '; line-height: 1.4;' }, '边框光效'),
+                  h('div', { style: 'font-size: 12px; color: ' + _onBg4 + '; opacity: 0.6; margin-top: 2px; line-height: 1.5;' }, '光效到达的边框区域变亮，模拟鸿蒙光效边框'),
                 ]),
                 h(Switch, {
                   modelValue: draft.borderGlowEnabled,
@@ -739,13 +743,13 @@ export function activate(ctx) {
               ] : null,
             ] : null,
             // GitHub
-            h('div', { class: 'settings-item', style: 'display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;' }, [
+            h('div', { class: _mi4, style: 'display: flex; justify-content: space-between; align-items: flex-start; gap: 12px;' }, [
               h('div', { style: 'flex: 1; min-width: 0;' }, [
-                h('div', { style: 'font-weight: 600; font-size: 14px; color: var(--miuix-on-background); line-height: 1.4;' }, 'GitHub'),
-                h('div', { style: 'font-size: 12px; color: var(--miuix-on-background); opacity: 0.6; margin-top: 2px; line-height: 1.5;' }, '点击跳转 GitHub 地址，欢迎 Star'),
+                h('div', { style: 'font-weight: 600; font-size: 14px; color: ' + _onBg4 + '; line-height: 1.4;' }, 'GitHub'),
+                h('div', { style: 'font-size: 12px; color: ' + _onBg4 + '; opacity: 0.6; margin-top: 2px; line-height: 1.5;' }, '点击跳转 GitHub 地址，欢迎 Star'),
               ]),
               h(Button, {
-                class: 'settings-button github-star',
+                size: 'xs',
                 onClick: function () { window.open('https://github.com/SkyShadowHero/echo-liquid-glass', '_blank'); },
               }, 'Github'),
             ]),
