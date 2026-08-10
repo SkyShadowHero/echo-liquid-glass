@@ -791,6 +791,98 @@ export function activate(ctx) {
     backTopObserver.observe(document.body, { childList: true, subtree: true });
   }
 
+  // ── Toast（右上角通知）同样的背景折射 ──
+  // toast 卡片是 v-for + TransitionGroup 动态出现/消失，和回顶按钮一样：
+  // 折射直接挂到卡片自身（mgr.mount 只加类/内联样式，不动 DOM 结构）
+  var toastSeq = 0;
+  var toastManagers = [];
+  var toastActive = false;
+  var toastObserver = null;
+  var toastObsTimer = null;
+
+  function initToastGlass() {
+    Array.prototype.forEach.call(
+      document.querySelectorAll('.toast-card'),
+      function (card) {
+        if (card.offsetWidth < 4 || card.offsetHeight < 4) return;
+        var exists = false;
+        for (var i = 0; i < toastManagers.length; i++) {
+          if (toastManagers[i]._el === card) { exists = true; break; }
+        }
+        if (exists) return;
+        var seq = toastSeq++;
+        var mgr = new LiquidGlassManager({
+          element: card,
+          thickness: liquidGlassParams.thickness,
+          bezelWidth: liquidGlassParams.bezelWidth,
+          ior: liquidGlassParams.ior,
+          specularOpacity: liquidGlassParams.specularOpacity,
+          bgOpacity: liquidGlassParams.bgOpacity,
+          blurAmount: liquidGlassParams.blurAmount,
+          borderEnabled: liquidGlassParams.borderEnabled,
+          glowEnabled: liquidGlassParams.glowEnabled,
+          glowWhite: liquidGlassParams.glowWhite,
+          glowRadius: buttonGlowRadius(),
+          svgId: 'liquid-glass-toast-svg-' + seq,
+          filterId: 'liquid-glass-toast-filter-' + seq,
+          bgVar: '--color-bg-elevated',
+        });
+        toastManagers.push(mgr);
+      }
+    );
+  }
+
+  // toast 消失（TransitionGroup leave 后移除）清理失效 manager
+  function pruneToast() {
+    for (var i = toastManagers.length - 1; i >= 0; i--) {
+      var mgr = toastManagers[i];
+      if (!mgr._el || !mgr._el.isConnected) {
+        mgr.unmount();
+        toastManagers.splice(i, 1);
+      }
+    }
+  }
+
+  function syncToast() {
+    pruneToast();
+    initToastGlass();
+    toastManagers.forEach(function (m) {
+      if (toastActive && !m._active) m.mount();
+      else if (!toastActive && m._active) m.unmount();
+    });
+  }
+
+  function applyToastGlass(enabled) {
+    toastActive = enabled;
+    toastManagers.forEach(function (m) {
+      if (enabled) m.mount(); else m.unmount();
+    });
+  }
+
+  function updateToastGlassParams(p) {
+    p = p || {};
+    var g = {};
+    for (var k in p) {
+      if (Object.prototype.hasOwnProperty.call(p, k)) g[k] = p[k];
+    }
+    if ('glowRadius' in g) { g.glowRadius = buttonGlowRadius(); }
+    toastManagers.forEach(function (m) { m.updateParams(g); });
+  }
+
+  function startToastObserver() {
+    if (toastObserver) return;
+    toastObserver = new MutationObserver(function () {
+      if (typeof requestAnimationFrame === 'function') {
+        if (toastObsTimer) cancelAnimationFrame(toastObsTimer);
+        toastObsTimer = requestAnimationFrame(syncToast);
+      } else {
+        clearTimeout(toastObsTimer);
+        toastObsTimer = setTimeout(syncToast, 0);
+      }
+    });
+    toastObserver.observe(document.body, { childList: true, subtree: true });
+  }
+
   // 等待 player-bar 出现后初始化液态玻璃
   function tryInitLiquidGlass() {
     var bar = document.querySelector('.player-bar');
@@ -834,6 +926,11 @@ export function activate(ctx) {
       applyBackToTopGlass(enabled);
       updateBackToTopGlassParams(p);
       startBackTopObserver();
+      // Toast（通知）：同样的折射
+      initToastGlass();
+      applyToastGlass(enabled);
+      updateToastGlassParams(p);
+      startToastObserver();
     });
     ctx.dispose(function () {
       if (liquidGlass) { liquidGlass.unmount(); liquidGlass = null; }
@@ -855,6 +952,13 @@ export function activate(ctx) {
       if (typeof cancelAnimationFrame === 'function' && backTopObsTimer) cancelAnimationFrame(backTopObsTimer);
       else clearTimeout(backTopObsTimer);
       backTopObsTimer = null;
+      toastManagers.forEach(function (m) { m.unmount(); });
+      toastManagers = [];
+      toastActive = false;
+      if (toastObserver) { toastObserver.disconnect(); toastObserver = null; }
+      if (typeof cancelAnimationFrame === 'function' && toastObsTimer) cancelAnimationFrame(toastObsTimer);
+      else clearTimeout(toastObsTimer);
+      toastObsTimer = null;
     });
   }
 
@@ -1012,6 +1116,27 @@ export function activate(ctx) {
           backTopManagers.forEach(function (m) { m.unmount(); });
         }
         updateBackToTopGlassParams({
+          thickness: draft.thickness,
+          bezelWidth: draft.bezelWidth,
+          ior: draft.ior,
+          specularOpacity: draft.specularOpacity,
+          bgOpacity: draft.bgOpacity,
+          blurAmount: draft.blurAmount,
+          borderEnabled: draft.borderEnabled,
+          glowEnabled: draft.glowEnabled,
+          glowWhite: draft.glowWhite,
+          glowRadius: draft.glowRadius,
+        });
+        // Toast 同步
+        initToastGlass();
+        if (draft.enabled) {
+          toastActive = true;
+          toastManagers.forEach(function (m) { if (!m._active) m.mount(); });
+        } else {
+          toastActive = false;
+          toastManagers.forEach(function (m) { m.unmount(); });
+        }
+        updateToastGlassParams({
           thickness: draft.thickness,
           bezelWidth: draft.bezelWidth,
           ior: draft.ior,
