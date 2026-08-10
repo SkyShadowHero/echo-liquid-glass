@@ -239,6 +239,8 @@ LiquidGlassManager.prototype.mount = function () {
       this._applyGlowColor();
       this._applyGlowRadius();
     }
+    // 常显描边用内联样式强制保留（压过主应用 button:focus 的 box-shadow:none）
+    this._applyGlowBorderInline();
   }
   this._active = true;
 };
@@ -255,6 +257,7 @@ LiquidGlassManager.prototype.unmount = function () {
     this._el.style.removeProperty('backdrop-filter');
     this._el.style.removeProperty('-webkit-backdrop-filter');
     this._el.style.removeProperty('background');
+    this._el.style.removeProperty('box-shadow');
     this._el.classList.remove('liquid-glass-refraction');
     this._el.classList.remove('liquid-glass-border');
     if (this._glowHandler) {
@@ -282,6 +285,7 @@ LiquidGlassManager.prototype.updateParams = function (opts) {
     if (this._el) {
       this._el.classList.toggle('liquid-glass-border', this._borderEnabled);
     }
+    this._applyGlowBorderInline();
   }
     if ('glowEnabled' in opts) {
     this._glowEnabled = opts.glowEnabled;
@@ -323,6 +327,7 @@ LiquidGlassManager.prototype.updateParams = function (opts) {
         }
       }
     }
+    this._applyGlowBorderInline();
   }
   if ('glowWhite' in opts) {
     this._glowWhite = opts.glowWhite;
@@ -454,6 +459,37 @@ LiquidGlassManager.prototype._applyGlowRadius = function () {
   this._el.style.setProperty('--border-glow-radius', this._glowRadius + 'px');
 };
 
+// 鸿蒙描边改用内联样式强制设置：
+// 主应用在 @layer 内用 button:focus { box-shadow: none !important } 清描边，
+// layer 内 !important 优先级高于未分层 !important，纯 CSS 压不过它；
+// 内联样式 !important 优先级最高，且不受 Vue 重写 className 影响，点击聚焦后描边不消失
+LiquidGlassManager.prototype._applyGlowBorderInline = function () {
+  if (!this._el) return;
+  if (!this._glowEnabled) {
+    this._el.style.removeProperty('box-shadow');
+    return;
+  }
+  // 播放按钮/回顶等鸿蒙描边：1.5px 白边；同时开启 ios27 描边时叠加左右黑/上下白高光
+  var border = this._borderEnabled;
+  if (border) {
+    this._el.style.setProperty(
+      'box-shadow',
+      'inset 0.5px 0 0 0 rgba(0,0,0,0.2), ' +
+      'inset -0.5px 0 0 0 rgba(0,0,0,0.2), ' +
+      'inset 0 0.5px 0 0 rgba(255,255,255,0.2), ' +
+      'inset 0 -0.5px 0 0 rgba(255,255,255,0.2), ' +
+      'inset 0 0 0 1.5px rgba(255, 255, 255, 0.4)',
+      'important'
+    );
+  } else {
+    this._el.style.setProperty(
+      'box-shadow',
+      'inset 0 0 0 1.5px rgba(255, 255, 255, 0.4)',
+      'important'
+    );
+  }
+};
+
 LiquidGlassManager.prototype._scheduleRebuild = function () {
   clearTimeout(this._rebuildTimer);
   var self = this;
@@ -504,7 +540,13 @@ export function activate(ctx) {
       ),
       function (btn) {
         if (titleBtnSeen.has(btn)) return;
-        if (btn.offsetWidth < 4 || btn.offsetHeight < 4) return;
+        // 刚插入/未布局时尺寸可能为 0（如播放页 Teleport 挂载的按钮），
+        // 跳过并安排稍后重试，避免一直等鼠标 hover 触发 class 变化才挂载
+        if (btn.offsetWidth < 4 || btn.offsetHeight < 4) {
+          clearTimeout(titleBarRetryTimer);
+          titleBarRetryTimer = setTimeout(ensureTitleBarButtonsMounted, 100);
+          return;
+        }
         titleBtnSeen.add(btn);
         // 识别关闭按钮（window-controls 里最后一个 control-btn / 播放页关闭按钮）
         var winControls = btn.closest('.window-controls');
@@ -571,6 +613,8 @@ export function activate(ctx) {
       titleBtnManagers.forEach(function (m) { m.mount(); });
     } else {
       if (titleBarLightCleanup) { titleBarLightCleanup(); }
+      clearTimeout(titleBarObsTimer);
+      clearTimeout(titleBarRetryTimer);
       titleBtnManagers.forEach(function (m) { m.unmount(); });
       titleBtnManagers = [];
       titleBtnSeen = new Set();
@@ -580,6 +624,11 @@ export function activate(ctx) {
     }
     // 顶部按钮的所有 CSS 修改（尺寸/间距/圆角/光效）只在开启折射时生效
     document.documentElement.classList.toggle('lg-titlebar-on', enabled);
+    // 光效开启状态同步到根类：常显描边不依赖按钮挂载类（点击重渲染后也不会闪失）
+    document.documentElement.classList.toggle(
+      'lg-titlebar-glow-on',
+      enabled && !!liquidGlassParams.glowEnabled
+    );
   }
 
   function updateTitleBarGlassParams(p) {
@@ -589,6 +638,11 @@ export function activate(ctx) {
       if (Object.prototype.hasOwnProperty.call(p, k)) g[k] = p[k];
     }
     if ('glowRadius' in g) { g.glowRadius = buttonGlowRadius(); }
+    // 光效开启状态同步到根类（常显描边不依赖按钮挂载类）
+    document.documentElement.classList.toggle(
+      'lg-titlebar-glow-on',
+      titleBtnActive && !!g.glowEnabled
+    );
     // 顶部按钮背景不透明度固定为 0（播放按钮保持自己的更高不透明度），忽略设置项
     g.bgOpacity = 0;
     titleBtnManagers.forEach(function (m) {
@@ -607,6 +661,7 @@ export function activate(ctx) {
   // 避免折射与描边在新按钮上消失；开关关闭时不包装
   var titleBarObserver = null;
   var titleBarObsTimer = null;
+  var titleBarRetryTimer = null;
   function ensureTitleBarButtonsMounted() {
     if (!titleBtnActive) return;
     // 播放页关闭时按钮已从 DOM 移除，清理对应 manager，避免残留
@@ -617,22 +672,44 @@ export function activate(ctx) {
       }
       return true;
     });
+    // 按钮被应用重建/移出 wrap 后，残留的空 wrap 会占位并挡住布局，统一清理
+    Array.prototype.forEach.call(document.querySelectorAll('.liquid-glass-btn-wrap'), function (w) {
+      var b = w.__lgBtn;
+      if (!b || !b.isConnected || !w.contains(b)) {
+        w.remove();
+      }
+    });
     initTitleBarGlass();
     bindTitleBarSharedGlow();
     titleBtnManagers.forEach(function (m) {
-      if (!m._active) m.mount();
+      if (!m._el || !m._el.isConnected) return;
+      // Vue 重渲染会用 className 全量重写，清掉我们加的 liquid-glass-* 类，
+      // 检测到丢失时先卸载再重挂（重新加类/折射/光效）
+      if (!m._el.classList.contains('liquid-glass-refraction')) {
+        m.unmount();
+        m.mount();
+      } else if (!m._active) {
+        m.mount();
+      }
     });
   }
   function startTitleBarObserver() {
     if (titleBarObserver) return;
-    // 标题栏与播放页（Teleport 到 body）的按钮都是动态挂载的，统一观察 body
+    // 标题栏与播放页（Teleport 到 body）的按钮都是动态挂载的，统一观察 body。
+    // 除 DOM 增删外还要监听 class 属性：Vue 重渲染会重写按钮 className，
+    // 清掉插件挂载的液态玻璃类，需要检测后重挂
     var holder = document.body;
     if (!holder) return;
     titleBarObserver = new MutationObserver(function () {
       clearTimeout(titleBarObsTimer);
-      titleBarObsTimer = setTimeout(ensureTitleBarButtonsMounted, 100);
+      titleBarObsTimer = setTimeout(ensureTitleBarButtonsMounted, 16);
     });
-    titleBarObserver.observe(holder, { childList: true, subtree: true });
+    titleBarObserver.observe(holder, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['class'],
+    });
   }
 
   // 光效可在不同按钮同时出现：光标划过标题栏/播放页时，贴近光标的所有按钮一起点亮。

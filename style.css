@@ -68,7 +68,7 @@
 
 /* 标题栏按钮液态玻璃：控制按钮（方形）赋予圆角，导航按钮本身是圆形
    （所有顶部修改都挂在 html.lg-titlebar-on 下，关闭折射开关时全部恢复原样） */
-html.lg-titlebar-on .window-controls .control-btn.liquid-glass-refraction {
+html.lg-titlebar-on .window-controls .control-btn {
   border-radius: 9999px !important;
 }
 
@@ -284,14 +284,16 @@ html.lg-titlebar-on .titlebar-nav .nav-btn:active svg,
 
 /* ── 鸿蒙光效：标题栏按钮 1px 描边（比底部的 2px 更细）── */
 /* 光效开启时按钮常显一圈 1px 描边，初始为不透明度 0.4 的白色（玻璃芯片的细边），
-   hover 时再叠上跟随光标的边框光效 */
-html.lg-titlebar-on .window-controls .control-btn.liquid-glass-glow,
-html.lg-titlebar-on .titlebar-nav .nav-btn.liquid-glass-glow {
+   hover 时再叠上跟随光标的边框光效。
+   描边用根类控制（html.lg-titlebar-glow-on），不依赖按钮挂载类，
+   按钮被应用点击重建后描边也立即恢复 */
+html.lg-titlebar-on.lg-titlebar-glow-on .window-controls .control-btn,
+html.lg-titlebar-on.lg-titlebar-glow-on .titlebar-nav .nav-btn {
   box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.4) !important;
 }
 /* 同时开启 ios27 描边时：ios 的左右黑/上下白高光与背景色描边共存 */
-html.lg-titlebar-on .window-controls .control-btn.liquid-glass-glow.liquid-glass-border,
-html.lg-titlebar-on .titlebar-nav .nav-btn.liquid-glass-glow.liquid-glass-border {
+html.lg-titlebar-on.lg-titlebar-glow-on .window-controls .control-btn.liquid-glass-border,
+html.lg-titlebar-on.lg-titlebar-glow-on .titlebar-nav .nav-btn.liquid-glass-border {
   box-shadow:
     inset 0.5px 0 0 0 rgba(0,0,0,0.2),
     inset -0.5px 0 0 0 rgba(0,0,0,0.2),
@@ -327,17 +329,17 @@ html.lg-titlebar-on .lyric-page .overlay-control-btn:active {
   transform: none !important;
   scale: none !important;
 }
-/* 播放页按钮同样使用鸿蒙光效的 1px 白色（不透明度 0.4）描边 */
-html.lg-titlebar-on .lyric-page .close-btn.liquid-glass-glow,
-html.lg-titlebar-on .lyric-page .top-right-btn.liquid-glass-glow,
-html.lg-titlebar-on .lyric-page .top-right-group-btn.liquid-glass-glow,
-html.lg-titlebar-on .lyric-page .overlay-control-btn.liquid-glass-glow {
+/* 播放页按钮同样使用鸿蒙光效的 1px 白色（不透明度 0.4）描边（根类控制，重建后立即恢复） */
+html.lg-titlebar-on.lg-titlebar-glow-on .lyric-page .close-btn,
+html.lg-titlebar-on.lg-titlebar-glow-on .lyric-page .top-right-btn,
+html.lg-titlebar-on.lg-titlebar-glow-on .lyric-page .top-right-group-btn,
+html.lg-titlebar-on.lg-titlebar-glow-on .lyric-page .overlay-control-btn {
   box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.4) !important;
 }
-html.lg-titlebar-on .lyric-page .close-btn.liquid-glass-glow.liquid-glass-border,
-html.lg-titlebar-on .lyric-page .top-right-btn.liquid-glass-glow.liquid-glass-border,
-html.lg-titlebar-on .lyric-page .top-right-group-btn.liquid-glass-glow.liquid-glass-border,
-html.lg-titlebar-on .lyric-page .overlay-control-btn.liquid-glass-glow.liquid-glass-border {
+html.lg-titlebar-on.lg-titlebar-glow-on .lyric-page .close-btn.liquid-glass-border,
+html.lg-titlebar-on.lg-titlebar-glow-on .lyric-page .top-right-btn.liquid-glass-border,
+html.lg-titlebar-on.lg-titlebar-glow-on .lyric-page .top-right-group-btn.liquid-glass-border,
+html.lg-titlebar-on.lg-titlebar-glow-on .lyric-page .overlay-control-btn.liquid-glass-border {
   box-shadow:
     inset 0.5px 0 0 0 rgba(0,0,0,0.2),
     inset -0.5px 0 0 0 rgba(0,0,0,0.2),
@@ -392,8 +394,9 @@ html.lg-titlebar-on .lyric-page .top-right-group-btn:active svg,
 html.lg-titlebar-on .lyric-page .overlay-control-btn:active svg {
   transform: scale(0.82);
 }
-/* 播放页窗口控制按钮（最小化/最大化/关闭）强制圆形，与标题栏一致 */
-html.lg-titlebar-on .lyric-page .overlay-control-btn.liquid-glass-refraction {
+/* 播放页窗口控制按钮（最小化/最大化/关闭）强制圆形，与标题栏一致。
+   用根类控制（不依赖挂载类），打开播放页按钮刚创建/尚未挂载折射时就是圆角 */
+html.lg-titlebar-on .lyric-page .overlay-control-btn {
   border-radius: 9999px !important;
 }
 
@@ -426,11 +429,11 @@ html.lg-titlebar-on .player-bar .liquid-glass-btn-wrap:active {
   transform: translate(var(--lg-tx, 0px), var(--lg-ty, 0px)) scale(1.12);
 }
 /* 播放按钮同用鸿蒙光效的 1px 白色（不透明度 0.4）描边，背景灰调由 JS 的背景色控制。
-   播放按钮只启用鸿蒙边框光效（不添加普通光晕类），描边挂在 .liquid-glass-border-glow 上 */
-html.lg-titlebar-on .player-bar .player-toggle.liquid-glass-border-glow {
+   描边用根类控制（lg-titlebar-glow-on），不依赖按钮挂载类，点击重建后立即恢复 */
+html.lg-titlebar-on.lg-titlebar-glow-on .player-bar .player-toggle {
   box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.4) !important;
 }
-html.lg-titlebar-on .player-bar .player-toggle.liquid-glass-border-glow.liquid-glass-border {
+html.lg-titlebar-on.lg-titlebar-glow-on .player-bar .player-toggle.liquid-glass-border {
   box-shadow:
     inset 0.5px 0 0 0 rgba(0,0,0,0.2),
     inset -0.5px 0 0 0 rgba(0,0,0,0.2),
