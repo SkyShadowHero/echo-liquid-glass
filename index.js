@@ -473,15 +473,20 @@ export function activate(ctx) {
 
   function initTitleBarGlass() {
     Array.prototype.forEach.call(
-      document.querySelectorAll('.titlebar-nav .nav-btn, .window-controls .control-btn'),
+      document.querySelectorAll(
+        '.titlebar-nav .nav-btn, .window-controls .control-btn, ' +
+        '.lyric-page .close-btn, .lyric-page .top-right-btn, .lyric-page .top-right-group-btn, ' +
+        '.lyric-page .overlay-control-btn'
+      ),
       function (btn) {
         if (titleBtnSeen.has(btn)) return;
         if (btn.offsetWidth < 4 || btn.offsetHeight < 4) return;
         titleBtnSeen.add(btn);
-        // 识别关闭按钮（window-controls 里最后一个 control-btn）
+        // 识别关闭按钮（window-controls 里最后一个 control-btn / 播放页关闭按钮）
         var winControls = btn.closest('.window-controls');
         var ctrls = winControls ? winControls.querySelectorAll('.control-btn') : [];
         var isClose = !!winControls && ctrls.length > 0 && ctrls[ctrls.length - 1] === btn;
+        if (!isClose && btn.classList.contains('overlay-control-btn--close')) isClose = true;
         // 打一层 wrapper：hover/点击放缩放在 wrap 上，避免与按钮自身 backdrop-filter 冲突导致折射消失
         var wrap = document.createElement('div');
         wrap.className = 'liquid-glass-btn-wrap';
@@ -566,14 +571,24 @@ export function activate(ctx) {
   var titleBarObsTimer = null;
   function ensureTitleBarButtonsMounted() {
     if (!titleBtnActive) return;
+    // 播放页关闭时按钮已从 DOM 移除，清理对应 manager，避免残留
+    titleBtnManagers = titleBtnManagers.filter(function (m) {
+      if (!m._el || !m._el.isConnected) {
+        m.unmount();
+        return false;
+      }
+      return true;
+    });
     initTitleBarGlass();
+    bindTitleBarSharedGlow();
     titleBtnManagers.forEach(function (m) {
       if (!m._active) m.mount();
     });
   }
   function startTitleBarObserver() {
     if (titleBarObserver) return;
-    var holder = document.querySelector('.title-bar');
+    // 标题栏与播放页（Teleport 到 body）的按钮都是动态挂载的，统一观察 body
+    var holder = document.body;
     if (!holder) return;
     titleBarObserver = new MutationObserver(function () {
       clearTimeout(titleBarObsTimer);
@@ -582,11 +597,11 @@ export function activate(ctx) {
     titleBarObserver.observe(holder, { childList: true, subtree: true });
   }
 
-  // 光效可在不同按钮同时出现：光标划过标题栏时，贴近光标的所有按钮一起点亮
+  // 光效可在不同按钮同时出现：光标划过标题栏/播放页时，贴近光标的所有按钮一起点亮。
+  // 绑定在 document 上，播放页（Teleport 到 body）动态挂载后同样生效
   function bindTitleBarSharedGlow() {
     if (titleBarLightCleanup || !titleBtnManagers.length) return;
-    var barEl = document.querySelector('.title-bar');
-    if (!barEl) return;
+    var barEl = document;
     function light(e) {
       titleBtnManagers.forEach(function (m) {
         var el = m._el;
