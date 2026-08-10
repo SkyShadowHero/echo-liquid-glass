@@ -396,3 +396,55 @@ html.lg-titlebar-on .lyric-page .overlay-control-btn:active svg {
 html.lg-titlebar-on .lyric-page .overlay-control-btn.liquid-glass-refraction {
   border-radius: 9999px !important;
 }
+
+/* ── 底部播放按钮：同样的液态玻璃折射 + hover 位移放大 ──
+   中和按钮自带的背景/边框/放缩（放缩移到 wrap 上，避免与 backdrop-filter 冲突） */
+html.lg-titlebar-on .player-bar .player-toggle {
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+html.lg-titlebar-on .player-bar .player-toggle:hover,
+html.lg-titlebar-on .player-bar .player-toggle:active {
+  background-color: transparent !important;
+  transform: none !important;
+  scale: none !important;
+}
+/* wrap 跟随按钮尺寸，位移 + hover 放大都在 wrap 上完成 */
+html.lg-titlebar-on .player-bar .liquid-glass-btn-wrap {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1) !important;
+}
+html.lg-titlebar-on .player-bar .liquid-glass-btn-wrap.lg-lit {
+  transform: translate(var(--lg-tx, 0px), var(--lg-ty, 0px)) scale(1.1);
+}
+html.lg-titlebar-on .player-bar .liquid-glass-btn-wrap:active {
+  transform: translate(var(--lg-tx, 0px), var(--lg-ty, 0px)) scale(1.12);
+}
+/* 播放按钮同用鸿蒙光效的 1px 白色（不透明度 0.4）描边，背景灰调由 JS 的背景色控制。
+   播放按钮只启用鸿蒙边框光效（不添加普通光晕类），描边挂在 .liquid-glass-border-glow 上 */
+html.lg-titlebar-on .player-bar .player-toggle.liquid-glass-border-glow {
+  box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.4) !important;
+}
+html.lg-titlebar-on .player-bar .player-toggle.liquid-glass-border-glow.liquid-glass-border {
+  box-shadow:
+    inset 0.5px 0 0 0 rgba(0,0,0,0.2),
+    inset -0.5px 0 0 0 rgba(0,0,0,0.2),
+    inset 0 0.5px 0 0 rgba(255,255,255,0.2),
+    inset 0 -0.5px 0 0 rgba(255,255,255,0.2),
+    inset 0 0 0 1.5px rgba(255, 255, 255, 0.4) !important;
+}
+html.lg-titlebar-on .player-bar .player-toggle.liquid-glass-border-glow::before {
+  box-shadow: inset 0 0 0 1.5px var(--glow-color, var(--color-primary));
+}
+/* 点击时只缩小内部图标，不动按钮与背景（保证折射/描边稳定） */
+html.lg-titlebar-on .player-bar .player-toggle svg {
+  transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1);
+}
+html.lg-titlebar-on .player-bar .player-toggle:active svg {
+  transform: scale(0.82);
+}

@@ -172,6 +172,8 @@ function LiquidGlassManager(opts) {
   this._filterId = opts.filterId || 'liquid-glass-refraction-filter';
   this._svgId = opts.svgId || 'liquid-glass-refraction-svg';
   this._bgVar = opts.bgVar || '--miuix-background';
+  // 可选：直接用固定颜色作背景（不用 CSS 变量），用于播放按钮这类需要微调灰调的场景
+  this._bgColor = opts.bgColor || null;
   this._thickness = opts.thickness != null ? opts.thickness : 100;
   this._bezelWidth = opts.bezelWidth != null ? opts.bezelWidth : 40;
   this._ior = opts.ior != null ? opts.ior : 2.5;
@@ -183,6 +185,8 @@ function LiquidGlassManager(opts) {
   this._glowWhite = opts.glowWhite != null ? opts.glowWhite : false;
   this._glowRadius = opts.glowRadius != null ? opts.glowRadius : 200;
   this._glowColor = opts.glowColor || null;
+  // 'both'：普通径向光晕 + 鸿蒙边框光效；'border'：只保留鸿蒙边框光效
+  this._glowStyle = opts.glowStyle || 'both';
   this._horizontalOnly = opts.horizontalOnly ? true : false;
   this._active = false;
   this._rebuildTimer = null;
@@ -207,26 +211,34 @@ LiquidGlassManager.prototype.mount = function () {
     this._el.classList.add('liquid-glass-border');
   }
   if (this._glowEnabled) {
-    this._el.classList.add('liquid-glass-glow');
-    this._applyGlowColor();
-    this._applyGlowRadius();
-    var self = this;
-    this._glowPending = false;
-    this._glowHandler = function (e) {
-      self._glowX = e.clientX;
-      self._glowY = e.clientY;
-      if (self._glowPending) return;
-      self._glowPending = true;
-      var el = self._el;
-      requestAnimationFrame(function () {
-        var rect = el.getBoundingClientRect();
-        el.style.setProperty('--glow-x', (self._glowX - rect.left) + 'px');
-        el.style.setProperty('--glow-y', (self._glowY - rect.top) + 'px');
-        self._glowPending = false;
-      });
-    };
-    this._el.addEventListener('mousemove', this._glowHandler);
+    // 普通径向光晕 + 鸿蒙边框光效
+    var self3 = this;
+    if (this._glowStyle !== 'border') {
+      this._el.classList.add('liquid-glass-glow');
+      this._applyGlowColor();
+      this._applyGlowRadius();
+      this._glowPending = false;
+      this._glowHandler = function (e) {
+        self3._glowX = e.clientX;
+        self3._glowY = e.clientY;
+        if (self3._glowPending) return;
+        self3._glowPending = true;
+        var el = self3._el;
+        requestAnimationFrame(function () {
+          var rect = el.getBoundingClientRect();
+          el.style.setProperty('--glow-x', (self3._glowX - rect.left) + 'px');
+          el.style.setProperty('--glow-y', (self3._glowY - rect.top) + 'px');
+          self3._glowPending = false;
+        });
+      };
+      this._el.addEventListener('mousemove', this._glowHandler);
+    }
     this._el.classList.add('liquid-glass-border-glow');
+    if (this._glowStyle === 'border') {
+      // 只保留鸿蒙边框光效：--glow-color/--glow-radius 由光效跟随统一管理
+      this._applyGlowColor();
+      this._applyGlowRadius();
+    }
   }
   this._active = true;
 };
@@ -274,27 +286,34 @@ LiquidGlassManager.prototype.updateParams = function (opts) {
     if ('glowEnabled' in opts) {
     this._glowEnabled = opts.glowEnabled;
     if (this._el) {
-      // 鸿蒙光效开关同时控制光晕与边框光效（描边）
-      this._el.classList.toggle('liquid-glass-glow', this._glowEnabled);
+      // 鸿蒙光效开关同时控制光晕与边框光效（描边），border 模式只保留边框光效
+      this._el.classList.toggle('liquid-glass-glow', this._glowEnabled && this._glowStyle !== 'border');
       this._el.classList.toggle('liquid-glass-border-glow', this._glowEnabled);
       if (this._glowEnabled) {
-        if (!this._glowHandler) {
-          var self = this;
-          this._glowPending = false;
-          this._glowHandler = function (e) {
-            self._glowX = e.clientX;
-            self._glowY = e.clientY;
-            if (self._glowPending) return;
-            self._glowPending = true;
-            var el = self._el;
-            requestAnimationFrame(function () {
-              var rect = el.getBoundingClientRect();
-              el.style.setProperty('--glow-x', (self._glowX - rect.left) + 'px');
-              el.style.setProperty('--glow-y', (self._glowY - rect.top) + 'px');
-              self._glowPending = false;
-            });
-          };
-          this._el.addEventListener('mousemove', this._glowHandler);
+        if (this._glowStyle !== 'border') {
+          if (!this._glowHandler) {
+            var self = this;
+            this._glowPending = false;
+            this._glowHandler = function (e) {
+              self._glowX = e.clientX;
+              self._glowY = e.clientY;
+              if (self._glowPending) return;
+              self._glowPending = true;
+              var el = self._el;
+              requestAnimationFrame(function () {
+                var rect = el.getBoundingClientRect();
+                el.style.setProperty('--glow-x', (self._glowX - rect.left) + 'px');
+                el.style.setProperty('--glow-y', (self._glowY - rect.top) + 'px');
+                self._glowPending = false;
+              });
+            };
+            this._el.addEventListener('mousemove', this._glowHandler);
+          }
+        } else {
+          if (this._glowHandler) {
+            this._el.removeEventListener('mousemove', this._glowHandler);
+            this._glowHandler = null;
+          }
         }
         this._applyGlowColor();
       } else {
@@ -410,7 +429,12 @@ LiquidGlassManager.prototype._applyBackdropFilter = function () {
 LiquidGlassManager.prototype._applyCSS = function () {
   if (!this._el) return;
   // 背景不透明度
-  var bg = 'color-mix(in srgb, var(' + this._bgVar + ') ' + this._bgOpacity + '%, transparent)';
+  var bg;
+  if (this._bgColor) {
+    bg = 'color-mix(in srgb, ' + this._bgColor + ' ' + this._bgOpacity + '%, transparent)';
+  } else {
+    bg = 'color-mix(in srgb, var(' + this._bgVar + ') ' + this._bgOpacity + '%, transparent)';
+  }
   this._el.style.setProperty('background', bg, 'important');
   // 刷新 backdrop-filter（模糊度可能变化）
   this._applyBackdropFilter();
@@ -476,7 +500,7 @@ export function activate(ctx) {
       document.querySelectorAll(
         '.titlebar-nav .nav-btn, .window-controls .control-btn, ' +
         '.lyric-page .close-btn, .lyric-page .top-right-btn, .lyric-page .top-right-group-btn, ' +
-        '.lyric-page .overlay-control-btn'
+        '.lyric-page .overlay-control-btn, .player-bar .player-toggle'
       ),
       function (btn) {
         if (titleBtnSeen.has(btn)) return;
@@ -498,22 +522,27 @@ export function activate(ctx) {
         wrap.appendChild(btn);
         var seq = titleBtnSeq++;
         if (isClose) btn.classList.add('lg-close-btn');
+        // 播放按钮：只保留鸿蒙边框光效（无普通径向光晕），背景不透明度更高
+        var isPlayerToggle = btn.classList.contains('player-toggle');
         var mgr = new LiquidGlassManager({
           element: btn,
           thickness: liquidGlassParams.thickness,
           bezelWidth: liquidGlassParams.bezelWidth,
           ior: liquidGlassParams.ior,
           specularOpacity: liquidGlassParams.specularOpacity,
-          // 顶部按钮背景不透明度固定为 0（透明玻璃片更好看），不跟随设置项
-          bgOpacity: 0,
+          // 顶部按钮背景不透明度固定为 0（透明玻璃片更好看），播放按钮则更大一些
+          bgOpacity: isPlayerToggle ? 60 : 0,
           blurAmount: liquidGlassParams.blurAmount,
           borderEnabled: liquidGlassParams.borderEnabled,
           glowEnabled: liquidGlassParams.glowEnabled,
           glowWhite: liquidGlassParams.glowWhite,
           glowRadius: buttonGlowRadius(),
+          glowStyle: isPlayerToggle ? 'border' : 'both',
           svgId: 'liquid-glass-title-svg-' + seq,
           filterId: 'liquid-glass-title-filter-' + seq,
           bgVar: '--color-bg-main',
+          // 播放按钮背景带一点点灰，避免纯白在玻璃上看不清
+          bgColor: isPlayerToggle ? '#e6e9ee' : null,
         });
         titleBtnManagers.push(mgr);
         if (isClose) closeBtnManager = mgr;
@@ -560,9 +589,18 @@ export function activate(ctx) {
       if (Object.prototype.hasOwnProperty.call(p, k)) g[k] = p[k];
     }
     if ('glowRadius' in g) { g.glowRadius = buttonGlowRadius(); }
-    // 顶部按钮背景不透明度固定为 0，忽略设置项
+    // 顶部按钮背景不透明度固定为 0（播放按钮保持自己的更高不透明度），忽略设置项
     g.bgOpacity = 0;
-    titleBtnManagers.forEach(function (m) { m.updateParams(g); });
+    titleBtnManagers.forEach(function (m) {
+      var opt = {};
+      for (var k in g) {
+        if (Object.prototype.hasOwnProperty.call(g, k)) opt[k] = g[k];
+      }
+      if (m._el && m._el.classList.contains('player-toggle')) {
+        opt.bgOpacity = 60;
+      }
+      m.updateParams(opt);
+    });
   }
 
   // 点击/切换窗口状态后应用可能重建标题栏按钮 DOM，重建后重新包装并挂载，
