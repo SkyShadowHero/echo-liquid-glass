@@ -572,8 +572,8 @@ export function activate(ctx) {
           bezelWidth: liquidGlassParams.bezelWidth,
           ior: liquidGlassParams.ior,
           specularOpacity: liquidGlassParams.specularOpacity,
-          // 顶部按钮背景不透明度固定为 0（透明玻璃片更好看），播放按钮则更大一些
-          bgOpacity: isPlayerToggle ? 60 : 0,
+          // 顶部按钮背景不透明度固定为 0（透明玻璃片更好看），播放按钮跟随设置值
+          bgOpacity: isPlayerToggle ? liquidGlassParams.bgOpacity : 0,
           blurAmount: liquidGlassParams.blurAmount,
           borderEnabled: liquidGlassParams.borderEnabled,
           glowEnabled: liquidGlassParams.glowEnabled,
@@ -583,8 +583,6 @@ export function activate(ctx) {
           svgId: 'liquid-glass-title-svg-' + seq,
           filterId: 'liquid-glass-title-filter-' + seq,
           bgVar: '--color-bg-main',
-          // 播放按钮背景带一点点灰，避免纯白在玻璃上看不清
-          bgColor: isPlayerToggle ? '#e6e9ee' : null,
         });
         titleBtnManagers.push(mgr);
         if (isClose) closeBtnManager = mgr;
@@ -643,7 +641,7 @@ export function activate(ctx) {
       'lg-titlebar-glow-on',
       titleBtnActive && !!g.glowEnabled
     );
-    // 顶部按钮背景不透明度固定为 0（播放按钮保持自己的更高不透明度），忽略设置项
+    // 顶部按钮背景不透明度固定为 0（透明玻璃片更好看），播放按钮跟随设置项
     g.bgOpacity = 0;
     titleBtnManagers.forEach(function (m) {
       var opt = {};
@@ -651,7 +649,7 @@ export function activate(ctx) {
         if (Object.prototype.hasOwnProperty.call(g, k)) opt[k] = g[k];
       }
       if (m._el && m._el.classList.contains('player-toggle')) {
-        opt.bgOpacity = 60;
+        opt.bgOpacity = liquidGlassParams.bgOpacity;
       }
       m.updateParams(opt);
     });
