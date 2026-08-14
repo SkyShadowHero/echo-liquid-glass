@@ -1106,6 +1106,7 @@ export function activate(ctx) {
       '.player-bar-container { position:absolute !important; bottom:8px !important; left:0 !important; right:0 !important; padding-bottom:0 !important; }' +
       '.player-bar .rounded-\\[10px\\] { border-radius:9999px !important; }' +
       '.back-to-top-btn { bottom:100px !important; }' +
+      '.settings-back-to-top { bottom:100px !important; }' +
 // 沉浸式标题栏：标题栏悬浮覆盖内容，内容可滑入其下方（sliver 详情页保持原布局）
       // 顶部 20px padding + 全宽顶部渐变遮罩（一直可见）
       '.main-content { position:relative !important; }' +
