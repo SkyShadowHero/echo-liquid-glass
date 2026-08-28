@@ -1125,6 +1125,15 @@ export function activate(ctx) {
         v.appendChild(s);
 
       });
+      // 众乐房房间页（.listen-session 撑满整页、没有 .scrollbar-view）：
+      // 底部会被悬浮底栏遮挡，同样补 100px 留白
+      var sessions = document.querySelectorAll('.listen-session:not(.lg-padded)');
+      sessions.forEach(function(sess) {
+        sess.classList.add('lg-padded');
+        var s = document.createElement('div');
+        s.style.cssText = 'height:100px;flex-shrink:0;pointer-events:none;';
+        sess.appendChild(s);
+      });
     }
     addSpacers();
     var spObs = new MutationObserver(addSpacers);
