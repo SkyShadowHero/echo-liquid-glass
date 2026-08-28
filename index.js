@@ -539,7 +539,13 @@ export function activate(ctx) {
         '.lyric-page .overlay-control-btn, .player-bar .player-toggle'
       ),
       function (btn) {
-        if (titleBtnSeen.has(btn)) return;
+        // 搜索按钮（.tb-search 里的 nav-btn）由 App 用 v-if 控制展开/收起：
+        // 插件把它包进 wrap 会移动 DOM，破坏 Vue 的 v-if 重建，导致搜索框收起后
+        // 按钮不再出现。保持它不被插件包裹，让 App 自己管理出现与消失
+        if (btn.closest('.tb-search')) return;
+        // 已包装过的按钮跳过；但如果元素曾被 App 移除又重新挂载（如 v-if 重建），
+        // 元素已不在 wrap 子树内，需要重新包装
+        if (titleBtnSeen.has(btn) && btn.parentElement && btn.parentElement.classList.contains('liquid-glass-btn-wrap')) return;
         // 刚插入/未布局时尺寸可能为 0（如播放页 Teleport 挂载的按钮），
         // 跳过并安排稍后重试，避免一直等鼠标 hover 触发 class 变化才挂载
         if (btn.offsetWidth < 4 || btn.offsetHeight < 4) {
@@ -655,6 +661,79 @@ export function activate(ctx) {
     });
   }
 
+  // ── 搜索按钮液态玻璃（不包 wrap，直接挂到按钮自身）──
+  // 搜索按钮由 App 的 v-if 控制展开/收起，收起后会重建按钮 DOM；
+  // 不能像其他标题栏按钮那样包进 wrap（会破坏 v-if 重建，按钮不再出现）。
+  // 采用和回顶按钮相同的模式：mgr.mount 只加类/内联样式，不动 DOM 结构，
+  // Vue 每次重建按钮后重新命中并挂载，液态玻璃/鸿蒙光效/ios 描边按设置恢复
+  var searchBtnSeq = 0;
+  var searchBtnManagers = [];
+
+  function initSearchBtnGlass() {
+    var btn = document.querySelector('.tb-search .nav-btn');
+    if (!btn || btn.offsetWidth < 4 || btn.offsetHeight < 4) return;
+    for (var i = 0; i < searchBtnManagers.length; i++) {
+      if (searchBtnManagers[i]._el === btn) return;
+    }
+    var seq = searchBtnSeq++;
+    var mgr = new LiquidGlassManager({
+      element: btn,
+      thickness: liquidGlassParams.thickness,
+      bezelWidth: liquidGlassParams.bezelWidth,
+      ior: liquidGlassParams.ior,
+      specularOpacity: liquidGlassParams.specularOpacity,
+      // 顶部按钮背景不透明度固定为 0（透明玻璃片更好看）
+      bgOpacity: 0,
+      blurAmount: liquidGlassParams.blurAmount,
+      borderEnabled: liquidGlassParams.borderEnabled,
+      glowEnabled: liquidGlassParams.glowEnabled,
+      glowWhite: liquidGlassParams.glowWhite,
+      glowRadius: buttonGlowRadius(),
+      glowStyle: 'both',
+      svgId: 'liquid-glass-search-svg-' + seq,
+      filterId: 'liquid-glass-search-filter-' + seq,
+      bgVar: '--color-bg-main',
+    });
+    searchBtnManagers.push(mgr);
+  }
+
+  // 搜索按钮被 v-if 移除（展开）后清理失效 manager；按钮重新出现（收起）后重新挂载
+  function syncSearchBtnGlass() {
+    for (var i = searchBtnManagers.length - 1; i >= 0; i--) {
+      var m = searchBtnManagers[i];
+      if (!m._el || !m._el.isConnected) {
+        m.unmount();
+        searchBtnManagers.splice(i, 1);
+      }
+    }
+    initSearchBtnGlass();
+    searchBtnManagers.forEach(function (m) {
+      if (!m._el || !m._el.isConnected) return;
+      if (titleBtnActive) {
+        // Vue 重渲染会重写 className，清掉 liquid-glass-* 类时先卸载再重挂
+        if (!m._el.classList.contains('liquid-glass-refraction')) {
+          m.unmount();
+          m.mount();
+        } else if (!m._active) {
+          m.mount();
+        }
+      } else if (m._active) {
+        m.unmount();
+      }
+    });
+  }
+
+  function updateSearchBtnGlassParams(p) {
+    p = p || {};
+    var g = {};
+    for (var k in p) {
+      if (Object.prototype.hasOwnProperty.call(p, k)) g[k] = p[k];
+    }
+    if ('glowRadius' in g) { g.glowRadius = buttonGlowRadius(); }
+    g.bgOpacity = 0;
+    searchBtnManagers.forEach(function (m) { m.updateParams(g); });
+  }
+
   // 点击/切换窗口状态后应用可能重建标题栏按钮 DOM，重建后重新包装并挂载，
   // 避免折射与描边在新按钮上消失；开关关闭时不包装
   var titleBarObserver = null;
@@ -670,6 +749,21 @@ export function activate(ctx) {
       }
       return true;
     });
+    // 搜索按钮不做包裹：若被旧版本包在 wrap 里，把它移回原位并删除 wrap，
+    // 同时卸载对应 manager（之后 initTitleBarGlass 会跳过 .tb-search 内的按钮）
+    var tbSearchWrap = document.querySelector('.tb-search .liquid-glass-btn-wrap');
+    if (tbSearchWrap) {
+      var sb = tbSearchWrap.__lgBtn;
+      if (sb) {
+        var sbParent = tbSearchWrap.__lgParent || tbSearchWrap.parentNode;
+        if (sbParent) sbParent.insertBefore(sb, tbSearchWrap);
+      }
+      tbSearchWrap.remove();
+      titleBtnManagers = titleBtnManagers.filter(function (m) {
+        if (m._el && m._el.closest && m._el.closest('.tb-search')) { m.unmount(); return false; }
+        return true;
+      });
+    }
     // 按钮被应用重建/移出 wrap 后，残留的空 wrap 会占位并挡住布局，统一清理
     Array.prototype.forEach.call(document.querySelectorAll('.liquid-glass-btn-wrap'), function (w) {
       var b = w.__lgBtn;
@@ -679,6 +773,8 @@ export function activate(ctx) {
     });
     initTitleBarGlass();
     bindTitleBarSharedGlow();
+    // 搜索按钮：v-if 重建后重新挂载玻璃（展开时按钮被移除，manager 自动清理）
+    syncSearchBtnGlass();
     titleBtnManagers.forEach(function (m) {
       if (!m._el || !m._el.isConnected) return;
       // Vue 重渲染会用 className 全量重写，清掉我们加的 liquid-glass-* 类，
@@ -1049,6 +1145,9 @@ export function activate(ctx) {
       startTitleBarObserver();
       applyTitleBarGlass(enabled);
       updateTitleBarGlassParams(p);
+      // 搜索按钮：玻璃直接挂按钮自身（不包 wrap，避免破坏 App 的 v-if 重建）
+      syncSearchBtnGlass();
+      updateSearchBtnGlassParams(p);
       // 回顶按钮：同样的折射 + hover 位移
       initBackToTopGlass();
       applyBackToTopGlass(enabled);
@@ -1070,6 +1169,8 @@ export function activate(ctx) {
       titleBtnSeen = new Set();
       titleBtnActive = false;
       closeBtnManager = null;
+      searchBtnManagers.forEach(function (m) { m.unmount(); });
+      searchBtnManagers = [];
       unwrapTitleButtons();
       document.documentElement.classList.remove('lg-titlebar-on');
       backTopManagers.forEach(function (m) { m.unmount(); });
@@ -1233,6 +1334,20 @@ export function activate(ctx) {
         // 标题栏按钮同步（内部会按开关决定包装/unwrap、挂载类）
         applyTitleBarGlass(draft.enabled);
         updateTitleBarGlassParams({
+          thickness: draft.thickness,
+          bezelWidth: draft.bezelWidth,
+          ior: draft.ior,
+          specularOpacity: draft.specularOpacity,
+          bgOpacity: draft.bgOpacity,
+          blurAmount: draft.blurAmount,
+          borderEnabled: draft.borderEnabled,
+          glowEnabled: draft.glowEnabled,
+          glowWhite: draft.glowWhite,
+          glowRadius: draft.glowRadius,
+        });
+        // 搜索按钮同步（玻璃跟随开关与参数；开关关闭时不挂载）
+        syncSearchBtnGlass();
+        updateSearchBtnGlassParams({
           thickness: draft.thickness,
           bezelWidth: draft.bezelWidth,
           ior: draft.ior,
