@@ -10,40 +10,6 @@
   -webkit-backdrop-filter: none !important;
 }
 
-/* Toast（右上角通知）液态玻璃：移除默认模糊，折射由 JS 接管 */
-.toast-card.liquid-glass-refraction {
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-}
-
-/* Toast 不使用自带描边（border），改用插件 ios27 / 鸿蒙光效描边
-   （对应设置里的「iOS 27 描边」「鸿蒙光效」开关，mount 时按开关加类） */
-.toast-card {
-  border: none !important;
-  box-shadow: none !important;
-}
-
-/* Toast 位置比默认低 20px（top-5=20px 的基础上再下移，避开顶部残留的标题栏内容） */
-.toast-viewport {
-  top: 40px !important;
-}
-
-/* Toast 出现：从右侧弹出；消失：缩回右侧 */
-.toast-slide-enter-active {
-  transition: opacity 0.24s ease, transform 0.32s cubic-bezier(0.34, 1.56, 0.64, 1) !important;
-}
-.toast-slide-enter-from {
-  opacity: 0;
-  transform: translateX(40px) scale(0.95) !important;
-}
-.toast-slide-leave-active {
-  transition: opacity 0.2s ease, transform 0.24s cubic-bezier(0.22, 1, 0.36, 1) !important;
-}
-.toast-slide-leave-to {
-  opacity: 0;
-  transform: translateX(60px) scale(0.9) !important;
-}
-
 /* 探索发现页面标题上方加 20px 内边距 */
 .explore-view .explore-header {
   padding-top: 18px !important;
