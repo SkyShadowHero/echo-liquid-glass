@@ -1096,19 +1096,15 @@ export function activate(ctx) {
   tryInitLiquidGlass();
   ctx.dispose(function () { barObserver.disconnect(); });
 
-  // ── 悬浮底栏 + 沉浸式标题栏（miuix 已启用则跳过）──
-  if (!document.documentElement.classList.contains('miuix-bg-active')) {
+  // ── 悬浮底栏（miuix 已启用则跳过：两套底栏样式会互相覆盖）──
+  var miuixActive = document.documentElement.classList.contains('miuix-bg-active');
+  if (!miuixActive) {
     ctx.css.inject(
       '.player-bar { padding-left:16px !important; padding-right:16px !important; border-radius:9999px !important; }' +
       '.player-bar-container { position:absolute !important; bottom:8px !important; left:0 !important; right:0 !important; padding-bottom:0 !important; }' +
       '.player-bar .rounded-\\[10px\\] { border-radius:9999px !important; }' +
       '.back-to-top-btn { bottom:100px !important; }' +
-      '.settings-back-to-top { bottom:100px !important; }' +
-// 沉浸式标题栏：标题栏悬浮覆盖内容，内容可滑入其下方（sliver 详情页保持原布局）
-      // 顶部留 20px padding，标题栏绝对定位于内容之上
-      '.main-content { position:relative !important; }' +
-      '.main-content:not(:has(.sliver-header-root)) { padding-top:20px !important; }' +
-      '.main-content:not(:has(.sliver-header-root)) > .title-bar { position:absolute !important; top:0 !important; left:0 !important; right:0 !important; z-index:200 !important; }'
+      '.settings-back-to-top { bottom:100px !important; }'
     );
     // 页面底部留白 + 顶部留白（和 miuix 一致：选 .scrollbar-view 加 spacer）
     function addSpacers() {
@@ -1136,6 +1132,15 @@ export function activate(ctx) {
     spObs.observe(document.body, { childList: true, subtree: true });
     ctx.dispose(function() { spObs.disconnect(); });
   }
+
+  // 沉浸式标题栏（顶部压缩）：与 miuix 无冲突，两种插件同时启用时也必须应用。
+  // 标题栏悬浮覆盖内容、内容顶部只留 20px（sliver 详情页保持原布局）。
+  // 若跟着 miuix 一起跳过，两插件同开时内容顶部会退回默认标题栏高度、顶部空白变大。
+  ctx.css.inject(
+    '.main-content { position:relative !important; }' +
+    '.main-content:not(:has(.sliver-header-root)) { padding-top:20px !important; }' +
+    '.main-content:not(:has(.sliver-header-root)) > .title-bar { position:absolute !important; top:0 !important; left:0 !important; right:0 !important; z-index:200 !important; }'
+  );
 
   // ── 设置面板 ──
   var vue = ctx.vue;
