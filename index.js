@@ -1105,10 +1105,9 @@ export function activate(ctx) {
       '.back-to-top-btn { bottom:100px !important; }' +
       '.settings-back-to-top { bottom:100px !important; }' +
 // 沉浸式标题栏：标题栏悬浮覆盖内容，内容可滑入其下方（sliver 详情页保持原布局）
-      // 顶部 20px padding + 全宽顶部渐变遮罩（一直可见）
+      // 顶部留 20px padding，标题栏绝对定位于内容之上
       '.main-content { position:relative !important; }' +
       '.main-content:not(:has(.sliver-header-root)) { padding-top:20px !important; }' +
-      '.main-content:not(:has(.sliver-header-root))::before { content:""; position:absolute; top:0 !important; left:0 !important; right:0 !important; height:64px; background:linear-gradient(to bottom, var(--color-bg-main) 0%, var(--color-bg-main) 35%, transparent); pointer-events:none; z-index:199; }' +
       '.main-content:not(:has(.sliver-header-root)) > .title-bar { position:absolute !important; top:0 !important; left:0 !important; right:0 !important; z-index:200 !important; }'
     );
     // 页面底部留白 + 顶部留白（和 miuix 一致：选 .scrollbar-view 加 spacer）
