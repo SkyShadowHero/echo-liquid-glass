@@ -1096,16 +1096,38 @@ export function activate(ctx) {
   tryInitLiquidGlass();
   ctx.dispose(function () { barObserver.disconnect(); });
 
-  // ── 悬浮底栏（miuix 已启用则跳过：两套底栏样式会互相覆盖）──
+  // ── 悬浮底栏 + 沉浸式标题栏 ──
+  // 注意：ctx.css.inject 不传 id 时共用同一个 <style>（默认 id 'runtime'），
+  // 多次调用会互相覆盖；所以底栏样式与沉浸式标题栏必须拼成一段、只注入一次。
   var miuixActive = document.documentElement.classList.contains('miuix-bg-active');
+  var layoutCss = '';
   if (!miuixActive) {
-    ctx.css.inject(
-      '.player-bar { padding-left:16px !important; padding-right:16px !important; border-radius:9999px !important; }' +
+    // Echo 新版「窗口背景」模式会把 .player-bar 的背景强制透明；折射未开启时
+    // 悬浮底栏会变成一条看不见的透明带。这里补上自己的玻璃表面（与 miuix 插件同款做法），
+    // 折射开启时 JS 会用内联样式覆盖这几项，不受影响。
+    layoutCss +=
+      '.player-bar { padding-left:16px !important; padding-right:16px !important; border-radius:9999px !important;' +
+      ' background-color: color-mix(in srgb, var(--surface-player-base) 80%, transparent) !important;' +
+      ' -webkit-backdrop-filter: blur(20px) !important; backdrop-filter: blur(20px) !important;' +
+      ' border-color: var(--border-subtle) !important;' +
+      ' box-shadow: 0 10px 28px rgba(0,0,0,0.10), inset 0 1px 0 0 rgba(255,255,255,0.8), inset 0 -1px 0 0 rgba(255,255,255,0.8) !important; }' +
+      'html.dark .player-bar {' +
+      ' box-shadow: 0 10px 28px rgba(0,0,0,0.36), inset 0 1px 0 0 rgba(255,255,255,0.15), inset 0 -1px 0 0 rgba(255,255,255,0.15) !important; }' +
       '.player-bar-container { position:absolute !important; bottom:8px !important; left:0 !important; right:0 !important; padding-bottom:0 !important; }' +
       '.player-bar .rounded-\\[10px\\] { border-radius:9999px !important; }' +
       '.back-to-top-btn { bottom:100px !important; }' +
-      '.settings-back-to-top { bottom:100px !important; }'
-    );
+      '.settings-back-to-top { bottom:100px !important; }';
+  }
+  // 沉浸式标题栏（顶部压缩）：与 miuix 无冲突，两种插件同时启用时也必须应用。
+  // 标题栏悬浮覆盖内容、内容顶部只留 20px（sliver 详情页保持原布局）。
+  // 若跟着 miuix 一起跳过，两插件同开时内容顶部会退回默认标题栏高度、顶部空白变大。
+  layoutCss +=
+    '.main-content { position:relative !important; }' +
+    '.main-content:not(:has(.sliver-header-root)) { padding-top:20px !important; }' +
+    '.main-content:not(:has(.sliver-header-root)) > .title-bar { position:absolute !important; top:0 !important; left:0 !important; right:0 !important; z-index:200 !important; }';
+  ctx.css.inject(layoutCss, { id: 'layout' });
+
+  if (!miuixActive) {
     // 页面底部留白 + 顶部留白（和 miuix 一致：选 .scrollbar-view 加 spacer）
     function addSpacers() {
       var views = document.querySelectorAll('.scrollbar-view:not(.lg-padded)');
@@ -1132,15 +1154,6 @@ export function activate(ctx) {
     spObs.observe(document.body, { childList: true, subtree: true });
     ctx.dispose(function() { spObs.disconnect(); });
   }
-
-  // 沉浸式标题栏（顶部压缩）：与 miuix 无冲突，两种插件同时启用时也必须应用。
-  // 标题栏悬浮覆盖内容、内容顶部只留 20px（sliver 详情页保持原布局）。
-  // 若跟着 miuix 一起跳过，两插件同开时内容顶部会退回默认标题栏高度、顶部空白变大。
-  ctx.css.inject(
-    '.main-content { position:relative !important; }' +
-    '.main-content:not(:has(.sliver-header-root)) { padding-top:20px !important; }' +
-    '.main-content:not(:has(.sliver-header-root)) > .title-bar { position:absolute !important; top:0 !important; left:0 !important; right:0 !important; z-index:200 !important; }'
-  );
 
   // ── 设置面板 ──
   var vue = ctx.vue;
