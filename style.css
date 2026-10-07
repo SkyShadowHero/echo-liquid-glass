@@ -154,3 +154,13 @@ html.lg-playertoggle-on .player-bar .player-toggle svg {
 html.lg-playertoggle-on .player-bar .player-toggle:active svg {
   transform: scale(0.82);
 }
+
+/* ── 评论区 / 详情页发送评论框 ──
+   发送框（.comment-composer-bottom / .detail-comment-composer）是 position: sticky，
+   而悬浮底栏容器是 z-index:1000 且位于 .main-content 之外（主内容 isolation:isolate），
+   会盖住贴在滚动区底部的发送框。这里把发送框的 sticky 底部抬升到底栏之上。
+   --drawer-bottom-offset 由宿主 PlayerBar 发布（= 底栏高度 + 8），再加 12px 间距。 */
+.comment-composer-bottom,
+.detail-comment-composer {
+  bottom: calc(var(--drawer-bottom-offset, 96px) + 12px) !important;
+}
