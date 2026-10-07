@@ -518,87 +518,68 @@ export function activate(ctx) {
     glowRadius: 200,
   };
 
-  // ── 标题栏按钮复用液态玻璃：每按钮独立滤镜 + 同一批光效参数 ──
-  var titleBtnSeq = 0;
-  var titleBtnActive = false;
-  var titleBtnManagers = [];
-  var titleBtnSeen = new Set();
-  var titleBarLightCleanup = null;
-  var closeBtnManager = null;
+  // ── 底部播放按钮复用液态玻璃：独立滤镜 + 光效参数 ──
+  var playerToggleSeq = 0;
+  var playerToggleActive = false;
+  var playerToggleManagers = [];
+  var playerToggleSeen = new Set();
+  var playerToggleLightCleanup = null;
 
   // 按钮光效半径要比设置的更小（小按钮用更小的光晕）
   function buttonGlowRadius() {
     return Math.max(30, Math.round(liquidGlassParams.glowRadius * 0.4));
   }
 
-  function initTitleBarGlass() {
+  function initPlayerToggleGlass() {
     Array.prototype.forEach.call(
-      document.querySelectorAll(
-        '.titlebar-nav .nav-btn, .window-controls .control-btn, ' +
-        '.lyric-page .close-btn, .lyric-page .top-right-btn, .lyric-page .top-right-group-btn, ' +
-        '.lyric-page .overlay-control-btn, .player-bar .player-toggle'
-      ),
+      document.querySelectorAll('.player-bar .player-toggle'),
       function (btn) {
-        // 搜索按钮（.tb-search 里的 nav-btn）由 App 用 v-if 控制展开/收起：
-        // 插件把它包进 wrap 会移动 DOM，破坏 Vue 的 v-if 重建，导致搜索框收起后
-        // 按钮不再出现。保持它不被插件包裹，让 App 自己管理出现与消失
-        if (btn.closest('.tb-search')) return;
         // 已包装过的按钮跳过；但如果元素曾被 App 移除又重新挂载（如 v-if 重建），
         // 元素已不在 wrap 子树内，需要重新包装
-        if (titleBtnSeen.has(btn) && btn.parentElement && btn.parentElement.classList.contains('liquid-glass-btn-wrap')) return;
-        // 刚插入/未布局时尺寸可能为 0（如播放页 Teleport 挂载的按钮），
-        // 跳过并安排稍后重试，避免一直等鼠标 hover 触发 class 变化才挂载
+        if (playerToggleSeen.has(btn) && btn.parentElement && btn.parentElement.classList.contains('liquid-glass-btn-wrap')) return;
+        // 刚插入/未布局时尺寸可能为 0，跳过并安排稍后重试
         if (btn.offsetWidth < 4 || btn.offsetHeight < 4) {
-          clearTimeout(titleBarRetryTimer);
-          titleBarRetryTimer = setTimeout(ensureTitleBarButtonsMounted, 100);
+          clearTimeout(playerToggleRetryTimer);
+          playerToggleRetryTimer = setTimeout(ensurePlayerToggleMounted, 100);
           return;
         }
-        titleBtnSeen.add(btn);
-        // 识别关闭按钮（window-controls 里最后一个 control-btn / 播放页关闭按钮）
-        var winControls = btn.closest('.window-controls');
-        var ctrls = winControls ? winControls.querySelectorAll('.control-btn') : [];
-        var isClose = !!winControls && ctrls.length > 0 && ctrls[ctrls.length - 1] === btn;
-        if (!isClose && btn.classList.contains('overlay-control-btn--close')) isClose = true;
+        playerToggleSeen.add(btn);
         // 打一层 wrapper：hover/点击放缩放在 wrap 上，避免与按钮自身 backdrop-filter 冲突导致折射消失
         var wrap = document.createElement('div');
         wrap.className = 'liquid-glass-btn-wrap';
         wrap.style.cssText = 'width:' + btn.offsetWidth + 'px;height:' + btn.offsetHeight + 'px;';
-        // 记录按钮原始父节点，关闭开关时把按钮移回原处、删除 wrap，恢复顶部原始布局
+        // 记录按钮原始父节点，关闭开关时把按钮移回原处、删除 wrap，恢复原始布局
         wrap.__lgBtn = btn;
         wrap.__lgParent = btn.parentNode;
         btn.parentNode.insertBefore(wrap, btn);
         wrap.appendChild(btn);
-        var seq = titleBtnSeq++;
-        if (isClose) btn.classList.add('lg-close-btn');
-        // 播放按钮：只保留鸿蒙边框光效（无普通径向光晕），背景不透明度更高
-        var isPlayerToggle = btn.classList.contains('player-toggle');
+        var seq = playerToggleSeq++;
+        // 播放按钮：只保留鸿蒙边框光效（无普通径向光晕）
         var mgr = new LiquidGlassManager({
           element: btn,
           thickness: liquidGlassParams.thickness,
           bezelWidth: liquidGlassParams.bezelWidth,
           ior: liquidGlassParams.ior,
           specularOpacity: liquidGlassParams.specularOpacity,
-          // 顶部按钮背景不透明度固定为 0（透明玻璃片更好看），播放按钮跟随设置值
-          bgOpacity: isPlayerToggle ? liquidGlassParams.bgOpacity : 0,
+          bgOpacity: liquidGlassParams.bgOpacity,
           blurAmount: liquidGlassParams.blurAmount,
           borderEnabled: liquidGlassParams.borderEnabled,
           glowEnabled: liquidGlassParams.glowEnabled,
           glowWhite: liquidGlassParams.glowWhite,
           glowRadius: buttonGlowRadius(),
-          glowStyle: isPlayerToggle ? 'border' : 'both',
-          svgId: 'liquid-glass-title-svg-' + seq,
-          filterId: 'liquid-glass-title-filter-' + seq,
+          glowStyle: 'border',
+          svgId: 'liquid-glass-playertoggle-svg-' + seq,
+          filterId: 'liquid-glass-playertoggle-filter-' + seq,
           bgVar: '--color-bg-main',
         });
-        titleBtnManagers.push(mgr);
-        if (isClose) closeBtnManager = mgr;
+        playerToggleManagers.push(mgr);
       }
     );
   }
 
-  // 把标题栏按钮从 wrap 中移回原父节点并删除 wrap，恢复原始 DOM 布局
-  function unwrapTitleButtons() {
-    Array.prototype.forEach.call(document.querySelectorAll('.liquid-glass-btn-wrap'), function (wrap) {
+  // 把播放按钮从 wrap 中移回原父节点并删除 wrap，恢复原始 DOM 布局
+  function unwrapPlayerToggles() {
+    Array.prototype.forEach.call(document.querySelectorAll('.player-bar .liquid-glass-btn-wrap'), function (wrap) {
       var btn = wrap.__lgBtn;
       var parent = wrap.__lgParent || wrap.parentNode;
       if (btn && parent) {
@@ -608,34 +589,33 @@ export function activate(ctx) {
     });
   }
 
-  function applyTitleBarGlass(enabled) {
-    if (enabled === titleBtnActive) return;
-    titleBtnActive = enabled;
+  function applyPlayerToggleGlass(enabled) {
+    if (enabled === playerToggleActive) return;
+    playerToggleActive = enabled;
     if (enabled) {
-      initTitleBarGlass();
-      bindTitleBarSharedGlow();
-      titleBtnManagers.forEach(function (m) { m.mount(); });
+      initPlayerToggleGlass();
+      bindPlayerToggleGlow();
+      playerToggleManagers.forEach(function (m) { m.mount(); });
     } else {
-      if (titleBarLightCleanup) { titleBarLightCleanup(); }
-      clearTimeout(titleBarObsTimer);
-      clearTimeout(titleBarRetryTimer);
-      titleBtnManagers.forEach(function (m) { m.unmount(); });
-      titleBtnManagers = [];
-      titleBtnSeen = new Set();
-      titleBtnSeq = 0;
-      closeBtnManager = null;
-      unwrapTitleButtons();
+      if (playerToggleLightCleanup) { playerToggleLightCleanup(); }
+      clearTimeout(playerToggleObsTimer);
+      clearTimeout(playerToggleRetryTimer);
+      playerToggleManagers.forEach(function (m) { m.unmount(); });
+      playerToggleManagers = [];
+      playerToggleSeen = new Set();
+      playerToggleSeq = 0;
+      unwrapPlayerToggles();
     }
-    // 顶部按钮的所有 CSS 修改（尺寸/间距/圆角/光效）只在开启折射时生效
-    document.documentElement.classList.toggle('lg-titlebar-on', enabled);
+    // 播放按钮的所有 CSS 修改（尺寸/圆角/光效）只在开启折射时生效
+    document.documentElement.classList.toggle('lg-playertoggle-on', enabled);
     // 光效开启状态同步到根类：常显描边不依赖按钮挂载类（点击重渲染后也不会闪失）
     document.documentElement.classList.toggle(
-      'lg-titlebar-glow-on',
+      'lg-playertoggle-glow-on',
       enabled && !!liquidGlassParams.glowEnabled
     );
   }
 
-  function updateTitleBarGlassParams(p) {
+  function updatePlayerToggleGlassParams(p) {
     p = p || {};
     var g = {};
     for (var k in p) {
@@ -644,138 +624,37 @@ export function activate(ctx) {
     if ('glowRadius' in g) { g.glowRadius = buttonGlowRadius(); }
     // 光效开启状态同步到根类（常显描边不依赖按钮挂载类）
     document.documentElement.classList.toggle(
-      'lg-titlebar-glow-on',
-      titleBtnActive && !!g.glowEnabled
+      'lg-playertoggle-glow-on',
+      playerToggleActive && !!g.glowEnabled
     );
-    // 顶部按钮背景不透明度固定为 0（透明玻璃片更好看），播放按钮跟随设置项
-    g.bgOpacity = 0;
-    titleBtnManagers.forEach(function (m) {
-      var opt = {};
-      for (var k in g) {
-        if (Object.prototype.hasOwnProperty.call(g, k)) opt[k] = g[k];
-      }
-      if (m._el && m._el.classList.contains('player-toggle')) {
-        opt.bgOpacity = liquidGlassParams.bgOpacity;
-      }
-      m.updateParams(opt);
-    });
+    playerToggleManagers.forEach(function (m) { m.updateParams(g); });
   }
 
-  // ── 搜索按钮液态玻璃（不包 wrap，直接挂到按钮自身）──
-  // 搜索按钮由 App 的 v-if 控制展开/收起，收起后会重建按钮 DOM；
-  // 不能像其他标题栏按钮那样包进 wrap（会破坏 v-if 重建，按钮不再出现）。
-  // 采用和回顶按钮相同的模式：mgr.mount 只加类/内联样式，不动 DOM 结构，
-  // Vue 每次重建按钮后重新命中并挂载，液态玻璃/鸿蒙光效/ios 描边按设置恢复
-  var searchBtnSeq = 0;
-  var searchBtnManagers = [];
-
-  function initSearchBtnGlass() {
-    var btn = document.querySelector('.tb-search .nav-btn');
-    if (!btn || btn.offsetWidth < 4 || btn.offsetHeight < 4) return;
-    for (var i = 0; i < searchBtnManagers.length; i++) {
-      if (searchBtnManagers[i]._el === btn) return;
-    }
-    var seq = searchBtnSeq++;
-    var mgr = new LiquidGlassManager({
-      element: btn,
-      thickness: liquidGlassParams.thickness,
-      bezelWidth: liquidGlassParams.bezelWidth,
-      ior: liquidGlassParams.ior,
-      specularOpacity: liquidGlassParams.specularOpacity,
-      // 顶部按钮背景不透明度固定为 0（透明玻璃片更好看）
-      bgOpacity: 0,
-      blurAmount: liquidGlassParams.blurAmount,
-      borderEnabled: liquidGlassParams.borderEnabled,
-      glowEnabled: liquidGlassParams.glowEnabled,
-      glowWhite: liquidGlassParams.glowWhite,
-      glowRadius: buttonGlowRadius(),
-      glowStyle: 'both',
-      svgId: 'liquid-glass-search-svg-' + seq,
-      filterId: 'liquid-glass-search-filter-' + seq,
-      bgVar: '--color-bg-main',
-    });
-    searchBtnManagers.push(mgr);
-  }
-
-  // 搜索按钮被 v-if 移除（展开）后清理失效 manager；按钮重新出现（收起）后重新挂载
-  function syncSearchBtnGlass() {
-    for (var i = searchBtnManagers.length - 1; i >= 0; i--) {
-      var m = searchBtnManagers[i];
-      if (!m._el || !m._el.isConnected) {
-        m.unmount();
-        searchBtnManagers.splice(i, 1);
-      }
-    }
-    initSearchBtnGlass();
-    searchBtnManagers.forEach(function (m) {
-      if (!m._el || !m._el.isConnected) return;
-      if (titleBtnActive) {
-        // Vue 重渲染会重写 className，清掉 liquid-glass-* 类时先卸载再重挂
-        if (!m._el.classList.contains('liquid-glass-refraction')) {
-          m.unmount();
-          m.mount();
-        } else if (!m._active) {
-          m.mount();
-        }
-      } else if (m._active) {
-        m.unmount();
-      }
-    });
-  }
-
-  function updateSearchBtnGlassParams(p) {
-    p = p || {};
-    var g = {};
-    for (var k in p) {
-      if (Object.prototype.hasOwnProperty.call(p, k)) g[k] = p[k];
-    }
-    if ('glowRadius' in g) { g.glowRadius = buttonGlowRadius(); }
-    g.bgOpacity = 0;
-    searchBtnManagers.forEach(function (m) { m.updateParams(g); });
-  }
-
-  // 点击/切换窗口状态后应用可能重建标题栏按钮 DOM，重建后重新包装并挂载，
+  // 点击/切换窗口状态后应用可能重建播放按钮 DOM，重建后重新包装并挂载，
   // 避免折射与描边在新按钮上消失；开关关闭时不包装
-  var titleBarObserver = null;
-  var titleBarObsTimer = null;
-  var titleBarRetryTimer = null;
-  function ensureTitleBarButtonsMounted() {
-    if (!titleBtnActive) return;
-    // 播放页关闭时按钮已从 DOM 移除，清理对应 manager，避免残留
-    titleBtnManagers = titleBtnManagers.filter(function (m) {
+  var playerToggleObserver = null;
+  var playerToggleObsTimer = null;
+  var playerToggleRetryTimer = null;
+  function ensurePlayerToggleMounted() {
+    if (!playerToggleActive) return;
+    // 按钮被移除时清理对应 manager，避免残留
+    playerToggleManagers = playerToggleManagers.filter(function (m) {
       if (!m._el || !m._el.isConnected) {
         m.unmount();
         return false;
       }
       return true;
     });
-    // 搜索按钮不做包裹：若被旧版本包在 wrap 里，把它移回原位并删除 wrap，
-    // 同时卸载对应 manager（之后 initTitleBarGlass 会跳过 .tb-search 内的按钮）
-    var tbSearchWrap = document.querySelector('.tb-search .liquid-glass-btn-wrap');
-    if (tbSearchWrap) {
-      var sb = tbSearchWrap.__lgBtn;
-      if (sb) {
-        var sbParent = tbSearchWrap.__lgParent || tbSearchWrap.parentNode;
-        if (sbParent) sbParent.insertBefore(sb, tbSearchWrap);
-      }
-      tbSearchWrap.remove();
-      titleBtnManagers = titleBtnManagers.filter(function (m) {
-        if (m._el && m._el.closest && m._el.closest('.tb-search')) { m.unmount(); return false; }
-        return true;
-      });
-    }
     // 按钮被应用重建/移出 wrap 后，残留的空 wrap 会占位并挡住布局，统一清理
-    Array.prototype.forEach.call(document.querySelectorAll('.liquid-glass-btn-wrap'), function (w) {
+    Array.prototype.forEach.call(document.querySelectorAll('.player-bar .liquid-glass-btn-wrap'), function (w) {
       var b = w.__lgBtn;
       if (!b || !b.isConnected || !w.contains(b)) {
         w.remove();
       }
     });
-    initTitleBarGlass();
-    bindTitleBarSharedGlow();
-    // 搜索按钮：v-if 重建后重新挂载玻璃（展开时按钮被移除，manager 自动清理）
-    syncSearchBtnGlass();
-    titleBtnManagers.forEach(function (m) {
+    initPlayerToggleGlass();
+    bindPlayerToggleGlow();
+    playerToggleManagers.forEach(function (m) {
       if (!m._el || !m._el.isConnected) return;
       // Vue 重渲染会用 className 全量重写，清掉我们加的 liquid-glass-* 类，
       // 检测到丢失时先卸载再重挂（重新加类/折射/光效）
@@ -787,18 +666,17 @@ export function activate(ctx) {
       }
     });
   }
-  function startTitleBarObserver() {
-    if (titleBarObserver) return;
-    // 标题栏与播放页（Teleport 到 body）的按钮都是动态挂载的，统一观察 body。
-    // 除 DOM 增删外还要监听 class 属性：Vue 重渲染会重写按钮 className，
-    // 清掉插件挂载的液态玻璃类，需要检测后重挂
+  function startPlayerToggleObserver() {
+    if (playerToggleObserver) return;
+    // 播放按钮是动态挂载的，观察 body：除 DOM 增删外还要监听 class 属性，
+    // Vue 重渲染会重写按钮 className，清掉插件挂载的液态玻璃类，需要检测后重挂
     var holder = document.body;
     if (!holder) return;
-    titleBarObserver = new MutationObserver(function () {
-      clearTimeout(titleBarObsTimer);
-      titleBarObsTimer = setTimeout(ensureTitleBarButtonsMounted, 16);
+    playerToggleObserver = new MutationObserver(function () {
+      clearTimeout(playerToggleObsTimer);
+      playerToggleObsTimer = setTimeout(ensurePlayerToggleMounted, 16);
     });
-    titleBarObserver.observe(holder, {
+    playerToggleObserver.observe(holder, {
       childList: true,
       subtree: true,
       attributes: true,
@@ -806,13 +684,13 @@ export function activate(ctx) {
     });
   }
 
-  // 光效可在不同按钮同时出现：光标划过标题栏/播放页时，贴近光标的所有按钮一起点亮。
-  // 绑定在 document 上，播放页（Teleport 到 body）动态挂载后同样生效
-  function bindTitleBarSharedGlow() {
-    if (titleBarLightCleanup || !titleBtnManagers.length) return;
+  // 光效跟随光标：光标划过底部播放按钮时点亮，并让按钮朝光标方向轻微位移。
+  // 绑定在 document 上，播放按钮动态挂载后同样生效
+  function bindPlayerToggleGlow() {
+    if (playerToggleLightCleanup || !playerToggleManagers.length) return;
     var barEl = document;
     function light(e) {
-      titleBtnManagers.forEach(function (m) {
+      playerToggleManagers.forEach(function (m) {
         var el = m._el;
         if (!el) return;
         var wrap = el.parentElement;
@@ -822,9 +700,6 @@ export function activate(ctx) {
         var dy = e.clientY - rect.top;
         if (dx < -pad || dx > rect.width + pad || dy < -pad || dy > rect.height + pad) {
           el.classList.remove('lg-lit');
-          if (el.classList.contains('lg-close-btn')) {
-            el.style.removeProperty('--glow-color');
-          }
           if (wrap) {
             wrap.classList.remove('lg-lit');
             wrap.style.removeProperty('--lg-tx');
@@ -835,10 +710,6 @@ export function activate(ctx) {
         el.style.setProperty('--glow-x', Math.round(dx) + 'px');
         el.style.setProperty('--glow-y', Math.round(dy) + 'px');
         el.classList.add('lg-lit');
-        // 关闭按钮 hover 时光效临时改为红色
-        if (el.classList.contains('lg-close-btn')) {
-          el.style.setProperty('--glow-color', '#ff3b30');
-        }
         // 按钮朝光标方向轻微位移：偏移比 = 距中心距离/半宽，夹在 ±3px
         if (wrap) {
           var maxS = 3;
@@ -853,13 +724,10 @@ export function activate(ctx) {
       });
     }
     function unlight() {
-      titleBtnManagers.forEach(function (m) {
+      playerToggleManagers.forEach(function (m) {
         if (!m._el) return;
         var el = m._el;
         el.classList.remove('lg-lit');
-        if (el.classList.contains('lg-close-btn')) {
-          el.style.removeProperty('--glow-color');
-        }
         var wrap = el.parentElement;
         if (wrap) {
           wrap.classList.remove('lg-lit');
@@ -870,149 +738,12 @@ export function activate(ctx) {
     }
     barEl.addEventListener('mousemove', light);
     barEl.addEventListener('mouseleave', unlight);
-    titleBarLightCleanup = function () {
+    playerToggleLightCleanup = function () {
       barEl.removeEventListener('mousemove', light);
       barEl.removeEventListener('mouseleave', unlight);
       unlight();
-      titleBarLightCleanup = null;
+      playerToggleLightCleanup = null;
     };
-  }
-
-  // ── 回顶按钮：同样的背景折射 + hover 跟随位移 ──
-  // 回顶按钮是 v-if + Transition 动态出现/消失。不能把按钮移进 wrap（会破坏 Vue
-  // 虚拟 DOM 与真实 DOM 的一致性，导致第二次滚动后按钮不再出现）。因此：
-  // 1) 折射直接挂到按钮自身（mgr.mount 只加类/内联样式，不动 DOM 结构）
-  // 2) hover 位移用 margin 变量实现（不创建合成层，折射稳定，也不改变 DOM 父子关系）
-  var backTopSeq = 0;
-  var backTopManagers = [];
-  var backTopHovered = new WeakSet();
-  var backTopActive = false;
-  var backTopObserver = null;
-  var backTopObsTimer = null;
-
-  // 按钮朝光标方向轻微位移：直接改 right/bottom 定位（不产生 transform，
-  // backdrop-filter 采样不受影响；相比 margin 变量，定位属性跟随无延迟）
-  function bindBackToTopHover(btn) {
-    if (backTopHovered.has(btn)) return;
-    backTopHovered.add(btn);
-    var cs = getComputedStyle(btn);
-    var baseR = parseFloat(cs.right) || 24;
-    var baseB = parseFloat(cs.bottom) || 100;
-    btn.addEventListener('mousemove', function (e) {
-      var rect = btn.getBoundingClientRect();
-      var pad = 10;
-      var dx = e.clientX - rect.left;
-      var dy = e.clientY - rect.top;
-      btn.style.setProperty('--lg-tx', '0px');
-      btn.style.setProperty('--lg-ty', '0px');
-      if (dx < -pad || dx > rect.width + pad || dy < -pad || dy > rect.height + pad) {
-        btn.style.right = baseR + 'px';
-        btn.style.bottom = baseB + 'px';
-        return;
-      }
-      var maxS = 3;
-      var hw = Math.max(rect.width / 2, 1);
-      var hh = Math.max(rect.height / 2, 1);
-      // 位移量：按钮整体 ±3px，图标在 CSS 里再放大 1.6 倍
-      var tx = Math.max(-maxS, Math.min(maxS, ((dx - hw) / hw) * maxS));
-      var ty = Math.max(-maxS, Math.min(maxS, ((dy - hh) / hh) * maxS));
-      btn.style.right = (baseR - tx).toFixed(2) + 'px';
-      btn.style.bottom = (baseB - ty).toFixed(2) + 'px';
-      btn.style.setProperty('--lg-tx', tx.toFixed(2) + 'px');
-      btn.style.setProperty('--lg-ty', ty.toFixed(2) + 'px');
-    });
-    btn.addEventListener('mouseleave', function () {
-      btn.style.right = baseR + 'px';
-      btn.style.bottom = baseB + 'px';
-      btn.style.setProperty('--lg-tx', '0px');
-      btn.style.setProperty('--lg-ty', '0px');
-    });
-  }
-
-  function initBackToTopGlass() {
-    Array.prototype.forEach.call(
-      document.querySelectorAll('.back-to-top-btn'),
-      function (btn) {
-        if (btn.offsetWidth < 4 || btn.offsetHeight < 4) return;
-        // 已处理过（该按钮已有 manager）则跳过
-        var exists = false;
-        for (var i = 0; i < backTopManagers.length; i++) {
-          if (backTopManagers[i]._el === btn) { exists = true; break; }
-        }
-        if (exists) return;
-        bindBackToTopHover(btn);
-        var seq = backTopSeq++;
-        var mgr = new LiquidGlassManager({
-          element: btn,
-          thickness: liquidGlassParams.thickness,
-          bezelWidth: liquidGlassParams.bezelWidth,
-          ior: liquidGlassParams.ior,
-          specularOpacity: liquidGlassParams.specularOpacity,
-          bgOpacity: liquidGlassParams.bgOpacity,
-          blurAmount: liquidGlassParams.blurAmount,
-          borderEnabled: liquidGlassParams.borderEnabled,
-          glowEnabled: liquidGlassParams.glowEnabled,
-          glowWhite: liquidGlassParams.glowWhite,
-          glowRadius: buttonGlowRadius(),
-          svgId: 'liquid-glass-backtop-svg-' + seq,
-          filterId: 'liquid-glass-backtop-filter-' + seq,
-          bgVar: '--color-bg-elevated',
-        });
-        backTopManagers.push(mgr);
-      }
-    );
-  }
-
-  // 回顶按钮 v-if 移除后清理失效 manager
-  function pruneBackToTop() {
-    for (var i = backTopManagers.length - 1; i >= 0; i--) {
-      var mgr = backTopManagers[i];
-      if (!mgr._el || !mgr._el.isConnected) {
-        mgr.unmount();
-        backTopManagers.splice(i, 1);
-      }
-    }
-  }
-
-  function syncBackToTop() {
-    pruneBackToTop();
-    initBackToTopGlass();
-    backTopManagers.forEach(function (m) {
-      if (backTopActive && !m._active) m.mount();
-      else if (!backTopActive && m._active) m.unmount();
-    });
-  }
-
-  function applyBackToTopGlass(enabled) {
-    backTopActive = enabled;
-    backTopManagers.forEach(function (m) {
-      if (enabled) m.mount(); else m.unmount();
-    });
-  }
-
-  function updateBackToTopGlassParams(p) {
-    p = p || {};
-    var g = {};
-    for (var k in p) {
-      if (Object.prototype.hasOwnProperty.call(p, k)) g[k] = p[k];
-    }
-    if ('glowRadius' in g) { g.glowRadius = buttonGlowRadius(); }
-    backTopManagers.forEach(function (m) { m.updateParams(g); });
-  }
-
-  function startBackTopObserver() {
-    if (backTopObserver) return;
-    backTopObserver = new MutationObserver(function () {
-      if (typeof requestAnimationFrame === 'function') {
-        // 回顶按钮 v-if 重建后下一帧同步，保证进入动画一开始就有折射与描边
-        if (backTopObsTimer) cancelAnimationFrame(backTopObsTimer);
-        backTopObsTimer = requestAnimationFrame(syncBackToTop);
-      } else {
-        clearTimeout(backTopObsTimer);
-        backTopObsTimer = setTimeout(syncBackToTop, 0);
-      }
-    });
-    backTopObserver.observe(document.body, { childList: true, subtree: true });
   }
 
   // 等待 player-bar 出现后初始化液态玻璃
@@ -1049,41 +780,23 @@ export function activate(ctx) {
         if (typeof saved.glowRadius === 'number') { p.glowRadius = saved.glowRadius; liquidGlassParams.glowRadius = saved.glowRadius; }
         liquidGlass.updateParams(p);
       }
-      // 标题栏按钮：复用同一批液态玻璃参数
-      startTitleBarObserver();
-      applyTitleBarGlass(enabled);
-      updateTitleBarGlassParams(p);
-      // 搜索按钮：玻璃直接挂按钮自身（不包 wrap，避免破坏 App 的 v-if 重建）
-      syncSearchBtnGlass();
-      updateSearchBtnGlassParams(p);
-      // 回顶按钮：同样的折射 + hover 位移
-      initBackToTopGlass();
-      applyBackToTopGlass(enabled);
-      updateBackToTopGlassParams(p);
-      startBackTopObserver();
+      // 底部播放按钮：复用同一批液态玻璃参数
+      startPlayerToggleObserver();
+      applyPlayerToggleGlass(enabled);
+      updatePlayerToggleGlassParams(p);
     });
     ctx.dispose(function () {
       if (liquidGlass) { liquidGlass.unmount(); liquidGlass = null; }
-      if (titleBarLightCleanup) { titleBarLightCleanup(); }
-      if (titleBarObserver) { titleBarObserver.disconnect(); titleBarObserver = null; }
-      clearTimeout(titleBarObsTimer);
-      titleBtnManagers.forEach(function (m) { m.unmount(); });
-      titleBtnManagers = [];
-      titleBtnSeen = new Set();
-      titleBtnActive = false;
-      closeBtnManager = null;
-      searchBtnManagers.forEach(function (m) { m.unmount(); });
-      searchBtnManagers = [];
-      unwrapTitleButtons();
-      document.documentElement.classList.remove('lg-titlebar-on');
-      backTopManagers.forEach(function (m) { m.unmount(); });
-      backTopManagers = [];
-      backTopHovered = new WeakSet();
-      backTopActive = false;
-      if (backTopObserver) { backTopObserver.disconnect(); backTopObserver = null; }
-      if (typeof cancelAnimationFrame === 'function' && backTopObsTimer) cancelAnimationFrame(backTopObsTimer);
-      else clearTimeout(backTopObsTimer);
-      backTopObsTimer = null;
+      if (playerToggleLightCleanup) { playerToggleLightCleanup(); }
+      if (playerToggleObserver) { playerToggleObserver.disconnect(); playerToggleObserver = null; }
+      clearTimeout(playerToggleObsTimer);
+      playerToggleManagers.forEach(function (m) { m.unmount(); });
+      playerToggleManagers = [];
+      playerToggleSeen = new Set();
+      playerToggleActive = false;
+      unwrapPlayerToggles();
+      document.documentElement.classList.remove('lg-playertoggle-on');
+      document.documentElement.classList.remove('lg-playertoggle-glow-on');
     });
   }
 
@@ -1096,9 +809,9 @@ export function activate(ctx) {
   tryInitLiquidGlass();
   ctx.dispose(function () { barObserver.disconnect(); });
 
-  // ── 悬浮底栏 + 沉浸式标题栏 ──
+  // ── 悬浮底栏 ──
   // 注意：ctx.css.inject 不传 id 时共用同一个 <style>（默认 id 'runtime'），
-  // 多次调用会互相覆盖；所以底栏样式与沉浸式标题栏必须拼成一段、只注入一次。
+  // 多次调用会互相覆盖，所以底栏样式只注入一次。
   var miuixActive = document.documentElement.classList.contains('miuix-bg-active');
   var layoutCss = '';
   if (!miuixActive) {
@@ -1118,13 +831,6 @@ export function activate(ctx) {
       '.back-to-top-btn { bottom:100px !important; }' +
       '.settings-back-to-top { bottom:100px !important; }';
   }
-  // 沉浸式标题栏（顶部压缩）：与 miuix 无冲突，两种插件同时启用时也必须应用。
-  // 标题栏悬浮覆盖内容、内容顶部只留 20px（sliver 详情页保持原布局）。
-  // 若跟着 miuix 一起跳过，两插件同开时内容顶部会退回默认标题栏高度、顶部空白变大。
-  layoutCss +=
-    '.main-content { position:relative !important; }' +
-    '.main-content:not(:has(.sliver-header-root)) { padding-top:20px !important; }' +
-    '.main-content:not(:has(.sliver-header-root)) > .title-bar { position:absolute !important; top:0 !important; left:0 !important; right:0 !important; z-index:200 !important; }';
   ctx.css.inject(layoutCss, { id: 'layout' });
 
   if (!miuixActive) {
@@ -1244,44 +950,9 @@ export function activate(ctx) {
           liquidGlassParams.glowWhite = draft.glowWhite;
           liquidGlassParams.glowRadius = draft.glowRadius;
         }
-        // 标题栏按钮同步（内部会按开关决定包装/unwrap、挂载类）
-        applyTitleBarGlass(draft.enabled);
-        updateTitleBarGlassParams({
-          thickness: draft.thickness,
-          bezelWidth: draft.bezelWidth,
-          ior: draft.ior,
-          specularOpacity: draft.specularOpacity,
-          bgOpacity: draft.bgOpacity,
-          blurAmount: draft.blurAmount,
-          borderEnabled: draft.borderEnabled,
-          glowEnabled: draft.glowEnabled,
-          glowWhite: draft.glowWhite,
-          glowRadius: draft.glowRadius,
-        });
-        // 搜索按钮同步（玻璃跟随开关与参数；开关关闭时不挂载）
-        syncSearchBtnGlass();
-        updateSearchBtnGlassParams({
-          thickness: draft.thickness,
-          bezelWidth: draft.bezelWidth,
-          ior: draft.ior,
-          specularOpacity: draft.specularOpacity,
-          bgOpacity: draft.bgOpacity,
-          blurAmount: draft.blurAmount,
-          borderEnabled: draft.borderEnabled,
-          glowEnabled: draft.glowEnabled,
-          glowWhite: draft.glowWhite,
-          glowRadius: draft.glowRadius,
-        });
-        // 回顶按钮同步
-        initBackToTopGlass();
-        if (draft.enabled) {
-          backTopActive = true;
-          backTopManagers.forEach(function (m) { if (!m._active) m.mount(); });
-        } else {
-          backTopActive = false;
-          backTopManagers.forEach(function (m) { m.unmount(); });
-        }
-        updateBackToTopGlassParams({
+        // 底部播放按钮同步（内部会按开关决定包装/unwrap、挂载类）
+        applyPlayerToggleGlass(draft.enabled);
+        updatePlayerToggleGlassParams({
           thickness: draft.thickness,
           bezelWidth: draft.bezelWidth,
           ior: draft.ior,

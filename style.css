@@ -4,12 +4,6 @@
   -webkit-backdrop-filter: none !important;
 }
 
-/* 回顶按钮液态玻璃：同样移除默认模糊，折射由 JS 接管 */
-.back-to-top-btn.liquid-glass-refraction {
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-}
-
 /* 探索发现页面标题上方加 20px 内边距 */
 .explore-view .explore-header {
   padding-top: 18px !important;
@@ -20,97 +14,12 @@
 .liquid-glass-border-glow {
   position: relative;
 }
-/* 回顶按钮本身是 absolute 定位，光效类不能把定位覆盖成 relative
-   （否则在 flex 容器里会被拉伸成满宽，导致按钮宽度异常） */
-.back-to-top-btn.liquid-glass-glow,
-.back-to-top-btn.liquid-glass-border-glow {
-  position: absolute !important;
-}
-
 /* ios 玻璃描边 */
 .liquid-glass-border {
   box-shadow: inset 0.5px 0 0 0 rgba(0,0,0,0.2), inset -0.5px 0 0 0 rgba(0,0,0,0.2), inset 0 0.5px 0 0 rgba(255,255,255,0.2), inset 0 -0.5px 0 0 rgba(255,255,255,0.2) !important;
 }
 
-/* 标题栏按钮液态玻璃：控制按钮（方形）赋予圆角，导航按钮本身是圆形
-   （所有顶部修改都挂在 html.lg-titlebar-on 下，关闭折射开关时全部恢复原样） */
-html.lg-titlebar-on .window-controls .control-btn {
-  border-radius: 9999px !important;
-}
-
-/* 右侧窗口控制按钮与左侧导航按钮同尺寸（34×34）；
-   wrap 按钮之间加间距，与左侧导航按钮一致的呼吸感 */
-html.lg-titlebar-on .window-controls {
-  gap: 4px !important;
-}
-html.lg-titlebar-on .window-controls .control-btn {
-  width: 34px !important;
-  height: 34px !important;
-}
-/* wrap 尺寸跟随按钮强制尺寸，避免按钮溢出 wrap 导致位置偏移 */
-html.lg-titlebar-on .window-controls .liquid-glass-btn-wrap {
-  width: 34px !important;
-  height: 34px !important;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-/* 关闭按钮（最后一个 wrap）右侧留 4px，离窗口边缘留出呼吸感（用 margin，不挤压按钮） */
-html.lg-titlebar-on .window-controls .liquid-glass-btn-wrap:last-child {
-  margin-right: 6px !important;
-}
-
-/* 标题栏按钮按压轻微放大
-   放缩放在 wrap 上；同时中和应用自带的按钮 hover/active 放缩：
-   直接对带 backdrop-filter 的按钮做 transform，会让折射背景短暂消失 */
-html.lg-titlebar-on .window-controls .control-btn:hover,
-html.lg-titlebar-on .window-controls .control-btn:active,
-html.lg-titlebar-on .titlebar-nav .nav-btn:hover,
-html.lg-titlebar-on .titlebar-nav .nav-btn:active {
-  transform: none !important;
-  scale: none !important;
-}
-html.lg-titlebar-on .liquid-glass-btn-wrap {
-  position: relative;
-  z-index: 1;
-  transition: transform 0.8s cubic-bezier(0.22, 1, 0.36, 1);
-}
-/* 播放页（歌词页）按钮容器是普通块/非 flex 布局，wrap 需 inline-flex 保持按钮内联排布 */
-html.lg-titlebar-on .lyric-page .liquid-glass-btn-wrap {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-/* 光标靠近按钮时让按钮朝光标方向轻微位移（JS 设置 --lg-tx/--lg-ty）。
-   用 transform（GPU 合成层）保证流畅；按钮自身已 scale:none，折射不会消失 */
-html.lg-titlebar-on .liquid-glass-btn-wrap.lg-lit {
-  transform: translate(var(--lg-tx, 0px), var(--lg-ty, 0px));
-}
-
-/* 点击时只缩小内部图标，不动按钮与背景（保证折射/描边稳定） */
-html.lg-titlebar-on .window-controls .control-btn svg,
-html.lg-titlebar-on .titlebar-nav .nav-btn svg,
-.back-to-top-btn svg {
-  transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1),
-    translate 0.12s cubic-bezier(0.22, 1, 0.36, 1);
-}
-html.lg-titlebar-on .window-controls .control-btn:active svg,
-html.lg-titlebar-on .titlebar-nav .nav-btn:active svg,
-.back-to-top-btn:active svg {
-  transform: scale(0.82);
-}
-
-/* 回顶按钮箭头跟随光标位移：放大 1.6 倍形成分层感，且过渡更快（0.12s < 按钮 0.22s），
-   视觉上图标领先按钮跟随光标；
-   !important 覆盖组件自带的 group-hover:-translate-y-1（上移动画） */
-.back-to-top-btn:hover svg {
-  translate: calc(var(--lg-tx, 0px) * 1.6) calc(var(--lg-ty, 0px) * 1.6) !important;
-}
-.back-to-top-btn:not(:hover) svg {
-  translate: 0 0 !important;
-}
-
-/* 光效同时点亮：光标附近的多个按钮一起发光（JS 在标题栏 mousemove 时加 .lg-lit） */
+/* 光效同时点亮：光标附近的多个按钮一起发光（JS 移动光标时加 .lg-lit） */
 .liquid-glass-glow.lg-lit::after {
   opacity: 0.35;
 }
@@ -118,64 +27,10 @@ html.lg-titlebar-on .titlebar-nav .nav-btn:active svg,
   opacity: 1;
 }
 
-/* 回顶按钮 hover 位移：JS 直接改 right/bottom 定位（不产生 transform，
-   backdrop-filter 折射不受影响）。
-   速度分层：按钮整体跟随慢一点（right/bottom 0.22s），内部图标跟随快
-   （svg translate 0.12s），形成按钮慢、图标快的层次感 */
-/* 中和应用自带的回顶按钮 hover/active 放缩，避免与定位位移冲突 */
-.back-to-top-btn:hover,
-.back-to-top-btn:active {
-  transform: none !important;
-  scale: none !important;
-}
-.back-to-top-btn {
-  transition: right 0.22s cubic-bezier(0.22, 1, 0.36, 1),
-    bottom 0.22s cubic-bezier(0.22, 1, 0.36, 1),
-    box-shadow 0.3s ease,
-    color 0.2s ease !important;
-}
-
-/* 回顶按钮出现：从下方弹出并带一点弹性回弹（overshoot 贝塞尔）；
-   消失：往后收缩
-   （!important 覆盖组件 scoped 的 .fade-enter-active[data-v] 同名规则） */
-.back-to-top-btn.fade-enter-active {
-  transition: opacity 0.22s ease, transform 0.32s cubic-bezier(0.34, 1.56, 0.64, 1),
-    right 0.22s cubic-bezier(0.22, 1, 0.36, 1),
-    bottom 0.22s cubic-bezier(0.22, 1, 0.36, 1) !important;
-}
-.back-to-top-btn.fade-leave-active {
-  transition: opacity 0.24s ease, transform 0.35s cubic-bezier(0.18, 0.6, 0.28, 1),
-    right 0.22s cubic-bezier(0.22, 1, 0.36, 1),
-    bottom 0.22s cubic-bezier(0.22, 1, 0.36, 1) !important;
-}
-.back-to-top-btn.fade-enter-from {
-  opacity: 0;
-  transform: translateY(28px) scale(0.6) !important;
-}
-.back-to-top-btn.fade-leave-to {
-  opacity: 0;
-  transform: translateY(20px) scale(0.5) !important;
-}
-
-/* 进入动画时 ios27 描边跟随淡入（描边开启时按钮有 .liquid-glass-border）。
-   box-shadow 无法直接过渡透明度，改为在动画期间叠一层「描边高亮」：
-   从无描边阴影到完整 ios27 描边 */
-.back-to-top-btn.liquid-glass-border.fade-enter-from {
-  box-shadow: none !important;
-}
-.back-to-top-btn.liquid-glass-border.fade-enter-active {
-  transition: opacity 0.22s ease, transform 0.32s cubic-bezier(0.34, 1.56, 0.64, 1),
-    box-shadow 0.22s ease !important;
-}
-
 /* hover 光晕 */
 .liquid-glass-glow {
   --glow-color: var(--color-primary);
   --glow-radius: 200px;
-}
-/* 关闭按钮光效固定为红色（一并控制 ::after 光晕与 ::before 边框光效） */
-.liquid-glass-glow.lg-close-btn {
-  --glow-color: #ff3b30 !important;
 }
 /* 深色模式覆盖 JS 设置的白色光效压暗 filter */
 .dark .liquid-glass-glow {
@@ -248,139 +103,21 @@ html.lg-titlebar-on .titlebar-nav .nav-btn:active svg,
   opacity: 1;
 }
 
-/* ── 鸿蒙光效：标题栏按钮 1px 描边（比底部的 2px 更细）── */
-/* 光效开启时按钮常显一圈 1px 描边，初始为不透明度 0.4 的白色（玻璃芯片的细边），
-   hover 时再叠上跟随光标的边框光效。
-   描边用根类控制（html.lg-titlebar-glow-on），不依赖按钮挂载类，
-   按钮被应用点击重建后描边也立即恢复 */
-html.lg-titlebar-on.lg-titlebar-glow-on .window-controls .control-btn,
-html.lg-titlebar-on.lg-titlebar-glow-on .titlebar-nav .nav-btn {
-  box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.4) !important;
-}
-/* 同时开启 ios27 描边时：ios 的左右黑/上下白高光与背景色描边共存 */
-html.lg-titlebar-on.lg-titlebar-glow-on .window-controls .control-btn.liquid-glass-border,
-html.lg-titlebar-on.lg-titlebar-glow-on .titlebar-nav .nav-btn.liquid-glass-border {
-  box-shadow:
-    inset 0.5px 0 0 0 rgba(0,0,0,0.2),
-    inset -0.5px 0 0 0 rgba(0,0,0,0.2),
-    inset 0 0.5px 0 0 rgba(255,255,255,0.2),
-    inset 0 -0.5px 0 0 rgba(255,255,255,0.2),
-    inset 0 0 0 1.5px rgba(255, 255, 255, 0.4) !important;
-}
-/* 跟随光标的边框光效在按钮上同样减到 1.5px */
-html.lg-titlebar-on .window-controls .control-btn.liquid-glass-border-glow::before,
-html.lg-titlebar-on .titlebar-nav .nav-btn.liquid-glass-border-glow::before {
-  box-shadow: inset 0 0 0 1.5px var(--glow-color, var(--color-primary));
-}
-
-/* ── 播放页（歌词页）顶部按钮：同样的液态玻璃 ──
-   中和按钮自带的半透明白背景与边框，玻璃折射与描边接管 */
-html.lg-titlebar-on .lyric-page .close-btn,
-html.lg-titlebar-on .lyric-page .top-right-btn,
-html.lg-titlebar-on .lyric-page .top-right-group-btn,
-html.lg-titlebar-on .lyric-page .overlay-control-btn {
-  background: transparent !important;
-  border: none !important;
-  box-shadow: none !important;
-}
-html.lg-titlebar-on .lyric-page .close-btn:hover,
-html.lg-titlebar-on .lyric-page .close-btn:active,
-html.lg-titlebar-on .lyric-page .top-right-btn:hover,
-html.lg-titlebar-on .lyric-page .top-right-btn:active,
-html.lg-titlebar-on .lyric-page .top-right-group-btn:hover,
-html.lg-titlebar-on .lyric-page .top-right-group-btn:active,
-html.lg-titlebar-on .lyric-page .overlay-control-btn:hover,
-html.lg-titlebar-on .lyric-page .overlay-control-btn:active {
-  background: transparent !important;
-  transform: none !important;
-  scale: none !important;
-}
-/* 播放页按钮同样使用鸿蒙光效的 1px 白色（不透明度 0.4）描边（根类控制，重建后立即恢复） */
-html.lg-titlebar-on.lg-titlebar-glow-on .lyric-page .close-btn,
-html.lg-titlebar-on.lg-titlebar-glow-on .lyric-page .top-right-btn,
-html.lg-titlebar-on.lg-titlebar-glow-on .lyric-page .top-right-group-btn,
-html.lg-titlebar-on.lg-titlebar-glow-on .lyric-page .overlay-control-btn {
-  box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.4) !important;
-}
-html.lg-titlebar-on.lg-titlebar-glow-on .lyric-page .close-btn.liquid-glass-border,
-html.lg-titlebar-on.lg-titlebar-glow-on .lyric-page .top-right-btn.liquid-glass-border,
-html.lg-titlebar-on.lg-titlebar-glow-on .lyric-page .top-right-group-btn.liquid-glass-border,
-html.lg-titlebar-on.lg-titlebar-glow-on .lyric-page .overlay-control-btn.liquid-glass-border {
-  box-shadow:
-    inset 0.5px 0 0 0 rgba(0,0,0,0.2),
-    inset -0.5px 0 0 0 rgba(0,0,0,0.2),
-    inset 0 0.5px 0 0 rgba(255,255,255,0.2),
-    inset 0 -0.5px 0 0 rgba(255,255,255,0.2),
-    inset 0 0 0 1.5px rgba(255, 255, 255, 0.4) !important;
-}
-
-/* 播放页按钮尺寸与主页标题栏一致（34×34），按钮之间同样留 4px 呼吸间距 */
-html.lg-titlebar-on .lyric-page .close-btn,
-html.lg-titlebar-on .lyric-page .top-right-btn,
-html.lg-titlebar-on .lyric-page .top-right-group-btn,
-html.lg-titlebar-on .lyric-page .overlay-control-btn {
-  width: 34px !important;
-  height: 34px !important;
-}
-html.lg-titlebar-on .lyric-page .liquid-glass-btn-wrap {
-  width: 34px !important;
-  height: 34px !important;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-html.lg-titlebar-on .lyric-page .overlay-header-controls,
-html.lg-titlebar-on .lyric-page .toolbar-left,
-html.lg-titlebar-on .lyric-page .toolbar-center,
-html.lg-titlebar-on .lyric-page .toolbar-right,
-html.lg-titlebar-on .lyric-page .toolbar-center-group,
-html.lg-titlebar-on .lyric-page .top-right-group {
-  gap: 4px !important;
-}
-/* 最右侧按钮离窗口边缘留 6px 呼吸感（与主页标题栏一致，用 margin 不挤压按钮） */
-html.lg-titlebar-on .lyric-page .overlay-header-controls .liquid-glass-btn-wrap:last-child {
-  margin-right: 6px !important;
-}
-html.lg-titlebar-on .lyric-page .close-btn.liquid-glass-border-glow::before,
-html.lg-titlebar-on .lyric-page .top-right-btn.liquid-glass-border-glow::before,
-html.lg-titlebar-on .lyric-page .top-right-group-btn.liquid-glass-border-glow::before,
-html.lg-titlebar-on .lyric-page .overlay-control-btn.liquid-glass-border-glow::before {
-  box-shadow: inset 0 0 0 1.5px var(--glow-color, var(--color-primary));
-}
-/* 播放页按钮点击时只缩小内部图标，不动按钮与背景（保证折射/描边稳定） */
-html.lg-titlebar-on .lyric-page .close-btn svg,
-html.lg-titlebar-on .lyric-page .top-right-btn svg,
-html.lg-titlebar-on .lyric-page .top-right-group-btn svg,
-html.lg-titlebar-on .lyric-page .overlay-control-btn svg {
-  transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1);
-}
-html.lg-titlebar-on .lyric-page .close-btn:active svg,
-html.lg-titlebar-on .lyric-page .top-right-btn:active svg,
-html.lg-titlebar-on .lyric-page .top-right-group-btn:active svg,
-html.lg-titlebar-on .lyric-page .overlay-control-btn:active svg {
-  transform: scale(0.82);
-}
-/* 播放页窗口控制按钮（最小化/最大化/关闭）强制圆形，与标题栏一致。
-   用根类控制（不依赖挂载类），打开播放页按钮刚创建/尚未挂载折射时就是圆角 */
-html.lg-titlebar-on .lyric-page .overlay-control-btn {
-  border-radius: 9999px !important;
-}
-
 /* ── 底部播放按钮：同样的液态玻璃折射 + hover 位移放大 ──
    中和按钮自带的背景/边框/放缩（放缩移到 wrap 上，避免与 backdrop-filter 冲突） */
-html.lg-titlebar-on .player-bar .player-toggle {
+html.lg-playertoggle-on .player-bar .player-toggle {
   background-color: transparent !important;
   border: none !important;
   box-shadow: none !important;
 }
-html.lg-titlebar-on .player-bar .player-toggle:hover,
-html.lg-titlebar-on .player-bar .player-toggle:active {
+html.lg-playertoggle-on .player-bar .player-toggle:hover,
+html.lg-playertoggle-on .player-bar .player-toggle:active {
   background-color: transparent !important;
   transform: none !important;
   scale: none !important;
 }
 /* wrap 跟随按钮尺寸，位移 + hover 放大都在 wrap 上完成 */
-html.lg-titlebar-on .player-bar .liquid-glass-btn-wrap {
+html.lg-playertoggle-on .player-bar .liquid-glass-btn-wrap {
   position: relative;
   z-index: 1;
   display: inline-flex;
@@ -388,18 +125,18 @@ html.lg-titlebar-on .player-bar .liquid-glass-btn-wrap {
   justify-content: center;
   transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1) !important;
 }
-html.lg-titlebar-on .player-bar .liquid-glass-btn-wrap.lg-lit {
+html.lg-playertoggle-on .player-bar .liquid-glass-btn-wrap.lg-lit {
   transform: translate(var(--lg-tx, 0px), var(--lg-ty, 0px)) scale(1.1);
 }
-html.lg-titlebar-on .player-bar .liquid-glass-btn-wrap:active {
+html.lg-playertoggle-on .player-bar .liquid-glass-btn-wrap:active {
   transform: translate(var(--lg-tx, 0px), var(--lg-ty, 0px)) scale(1.12);
 }
 /* 播放按钮同用鸿蒙光效的 1px 白色（不透明度 0.4）描边，背景灰调由 JS 的背景色控制。
-   描边用根类控制（lg-titlebar-glow-on），不依赖按钮挂载类，点击重建后立即恢复 */
-html.lg-titlebar-on.lg-titlebar-glow-on .player-bar .player-toggle {
+   描边用根类控制（lg-playertoggle-glow-on），不依赖按钮挂载类，点击重建后立即恢复 */
+html.lg-playertoggle-on.lg-playertoggle-glow-on .player-bar .player-toggle {
   box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.4) !important;
 }
-html.lg-titlebar-on.lg-titlebar-glow-on .player-bar .player-toggle.liquid-glass-border {
+html.lg-playertoggle-on.lg-playertoggle-glow-on .player-bar .player-toggle.liquid-glass-border {
   box-shadow:
     inset 0.5px 0 0 0 rgba(0,0,0,0.2),
     inset -0.5px 0 0 0 rgba(0,0,0,0.2),
@@ -407,13 +144,13 @@ html.lg-titlebar-on.lg-titlebar-glow-on .player-bar .player-toggle.liquid-glass-
     inset 0 -0.5px 0 0 rgba(255,255,255,0.2),
     inset 0 0 0 1.5px rgba(255, 255, 255, 0.4) !important;
 }
-html.lg-titlebar-on .player-bar .player-toggle.liquid-glass-border-glow::before {
+html.lg-playertoggle-on .player-bar .player-toggle.liquid-glass-border-glow::before {
   box-shadow: inset 0 0 0 1.5px var(--glow-color, var(--color-primary));
 }
 /* 点击时只缩小内部图标，不动按钮与背景（保证折射/描边稳定） */
-html.lg-titlebar-on .player-bar .player-toggle svg {
+html.lg-playertoggle-on .player-bar .player-toggle svg {
   transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1);
 }
-html.lg-titlebar-on .player-bar .player-toggle:active svg {
+html.lg-playertoggle-on .player-bar .player-toggle:active svg {
   transform: scale(0.82);
 }
