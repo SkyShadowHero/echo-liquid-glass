@@ -809,57 +809,83 @@ export function activate(ctx) {
   tryInitLiquidGlass();
   ctx.dispose(function () { barObserver.disconnect(); });
 
-  // ── 悬浮底栏 ──
-  // 注意：ctx.css.inject 不传 id 时共用同一个 <style>（默认 id 'runtime'），
-  // 多次调用会互相覆盖，所以底栏样式只注入一次。
-  var miuixActive = document.documentElement.classList.contains('miuix-bg-active');
-  var layoutCss = '';
-  if (!miuixActive) {
-    // Echo 新版「窗口背景」模式会把 .player-bar 的背景强制透明；折射未开启时
-    // 悬浮底栏会变成一条看不见的透明带。这里补上自己的玻璃表面（与 miuix 插件同款做法），
-    // 折射开启时 JS 会用内联样式覆盖这几项，不受影响。
-    layoutCss +=
-      '.player-bar { padding-left:16px !important; padding-right:16px !important; border-radius:9999px !important;' +
-      ' background-color: color-mix(in srgb, var(--surface-player-base) 80%, transparent) !important;' +
-      ' -webkit-backdrop-filter: blur(20px) !important; backdrop-filter: blur(20px) !important;' +
-      ' border-color: var(--border-subtle) !important;' +
-      ' box-shadow: 0 10px 28px rgba(0,0,0,0.10), inset 0 1px 0 0 rgba(255,255,255,0.8), inset 0 -1px 0 0 rgba(255,255,255,0.8) !important; }' +
-      'html.dark .player-bar {' +
-      ' box-shadow: 0 10px 28px rgba(0,0,0,0.36), inset 0 1px 0 0 rgba(255,255,255,0.15), inset 0 -1px 0 0 rgba(255,255,255,0.15) !important; }' +
-      '.player-bar-container { position:absolute !important; bottom:8px !important; left:0 !important; right:0 !important; padding-bottom:0 !important; }' +
-      '.player-bar .rounded-\\[10px\\] { border-radius:9999px !important; }' +
-      '.back-to-top-btn { bottom:100px !important; }' +
-      '.settings-back-to-top { bottom:100px !important; }';
+  // ── 悬浮底栏沉浸（独立实现）──
+  // 仅在宿主已通过「Miuix 主题」启用沉浸时才让位，否则自己实现，保证本插件单独使用也生效。
+  // 注意：miuix-bg-active 只要装了 miuix 插件就会被加上，不能用来判断；
+  // 用仅在 miuix 主题启用后才出现的 miuix-theme-active 判断。
+  var LIQUID_LAYOUT_CSS =
+    '.player-bar { padding-left:16px !important; padding-right:16px !important; border-radius:9999px !important;' +
+    ' background-color: color-mix(in srgb, var(--surface-player-base) 80%, transparent) !important;' +
+    ' -webkit-backdrop-filter: blur(20px) !important; backdrop-filter: blur(20px) !important;' +
+    ' border-color: var(--border-subtle) !important;' +
+    ' box-shadow: 0 10px 28px rgba(0,0,0,0.10), inset 0 1px 0 0 rgba(255,255,255,0.8), inset 0 -1px 0 0 rgba(255,255,255,0.8) !important; }' +
+    'html.dark .player-bar {' +
+    ' box-shadow: 0 10px 28px rgba(0,0,0,0.36), inset 0 1px 0 0 rgba(255,255,255,0.15), inset 0 -1px 0 0 rgba(255,255,255,0.15) !important; }' +
+    '.player-bar-container { position:absolute !important; bottom:8px !important; left:0 !important; right:0 !important; padding-bottom:0 !important; }' +
+    '/* β8: .main-player-panel 新增 overflow:hidden，容器 absolute 后面板高度塌成 0，会裁剪掉浮动底栏；放开裁剪 */' +
+    '.main-player-panel { overflow: visible !important; }' +
+    '/* 沉浸底栏：去掉 workspace 底部 gap 与内边距，让主内容延伸到窗口底部 */' +
+    '.main-workspace { gap:0 !important; padding-bottom:0 !important; }' +
+    '.player-bar .rounded-\\[10px\\] { border-radius:9999px !important; }' +
+    '/* 新版 BackToTop 定位在包裹层（.absolute），按钮自身 bottom 无效，用 :has 抬到悬浮底栏之上 */' +
+    '.absolute:has(> .back-to-top-btn) { bottom:100px !important; }' +
+    '.settings-back-to-top { bottom:100px !important; }';
+
+  function miuixThemeActive() {
+    return document.documentElement.classList.contains('miuix-theme-active');
   }
-  ctx.css.inject(layoutCss, { id: 'layout' });
 
-  if (!miuixActive) {
-    // 页面底部留白 + 顶部留白（和 miuix 一致：选 .scrollbar-view 加 spacer）
-    function addSpacers() {
-      var views = document.querySelectorAll('.scrollbar-view:not(.lg-padded)');
-      views.forEach(function(v) {
-        v.classList.add('lg-padded');
-        // 底部留白：悬浮底栏不遮挡内容
-        var s = document.createElement('div');
-        s.style.cssText = 'height:100px;flex-shrink:0;pointer-events:none;';
-        v.appendChild(s);
+  // 页面底部留白（选 .scrollbar-view / .listen-session 加 spacer）
+  function addSpacers() {
+    document.querySelectorAll('.scrollbar-view:not(.lg-padded)').forEach(function (v) {
+      v.classList.add('lg-padded');
+      var s = document.createElement('div');
+      s.className = 'lg-spacer';
+      s.style.cssText = 'height:100px;flex-shrink:0;pointer-events:none;';
+      v.appendChild(s);
+    });
+    document.querySelectorAll('.listen-session:not(.lg-padded)').forEach(function (sess) {
+      sess.classList.add('lg-padded');
+      var s = document.createElement('div');
+      s.className = 'lg-spacer';
+      s.style.cssText = 'height:100px;flex-shrink:0;pointer-events:none;';
+      sess.appendChild(s);
+    });
+  }
+  function removeSpacers() {
+    document.querySelectorAll('.lg-spacer').forEach(function (s) { s.remove(); });
+    document.querySelectorAll('.lg-padded').forEach(function (v) { v.classList.remove('lg-padded'); });
+  }
 
-      });
-      // 众乐房房间页（.listen-session 撑满整页、没有 .scrollbar-view）：
-      // 底部会被悬浮底栏遮挡，同样补 100px 留白
-      var sessions = document.querySelectorAll('.listen-session:not(.lg-padded)');
-      sessions.forEach(function(sess) {
-        sess.classList.add('lg-padded');
-        var s = document.createElement('div');
-        s.style.cssText = 'height:100px;flex-shrink:0;pointer-events:none;';
-        sess.appendChild(s);
-      });
+  var spObs = null;
+  var liquidImmersiveOn = null;
+  function applyLiquidImmersive(enabled) {
+    if (enabled === liquidImmersiveOn) return;
+    liquidImmersiveOn = enabled;
+    ctx.css.inject(enabled ? LIQUID_LAYOUT_CSS : '', { id: 'layout' });
+    if (enabled) {
+      addSpacers();
+      if (!spObs) {
+        spObs = new MutationObserver(addSpacers);
+        spObs.observe(document.body, { childList: true, subtree: true });
+      }
+    } else {
+      if (spObs) { spObs.disconnect(); spObs = null; }
+      removeSpacers();
     }
-    addSpacers();
-    var spObs = new MutationObserver(addSpacers);
-    spObs.observe(document.body, { childList: true, subtree: true });
-    ctx.dispose(function() { spObs.disconnect(); });
   }
+
+  // 初始：Miuix 主题未启用时自己实现沉浸
+  applyLiquidImmersive(!miuixThemeActive());
+  // Miuix 主题启用/关闭时动态让位/接管
+  var lgThemeObs = new MutationObserver(function () {
+    applyLiquidImmersive(!miuixThemeActive());
+  });
+  lgThemeObs.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+  ctx.dispose(function () {
+    lgThemeObs.disconnect();
+    if (spObs) { spObs.disconnect(); spObs = null; }
+  });
 
   // ── 设置面板 ──
   var vue = ctx.vue;
